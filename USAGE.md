@@ -1,45 +1,70 @@
-# Usage
+# FileSystemTreeView component – Usage
 
-// TODO…
+## Basic Usage
 
-For now, there is a listing of …
+Basically, use the factory methods of the main interfaces to create a new instance, that is
 
-## The UserNodeConfiguration interface
+`JFileSystemTreeView.createInstance()` for the `-swing` version or
 
-    /**
-     * Clients may implement this interface and provide an instance to the
-     * {@link de.bernd_michaely.common.filesystem.view.base.Configuration.Builder Configuration.Builder}
-     * to create a custom configuration for the file system view component.
-     *
-     * @author Bernd Michaely (info@bernd-michaely.de)
-     */
+`FileSystemTreeView.createInstance()` for the `-fx` version.
+
+The `createInstance()` methods optionally take a `Configuration` argument, which can be configured via the `builder()`. The parameterless versions behave like passing `Configuration.builder().build()`.
+
+Most enhanced configuration options can be provided by passing an implementation of the `UserNodeConfiguration` interface.
+
+## Advanced Usage
+
+### The Configuration Builder
+
+The `Configuration Builder` allows to set a few properties for the created instance, all with a useful default:
+
+* a specific (global root) **FileSystem** to use,
+* requesting of a **WatchService**,
+* setting a specific **filename comparator** and
+* an instance of a custom implementation of the **`UserNodeConfiguration`** `interface`, which allows for further advanced configuration.
+
+### The UserNodeConfiguration interface
+
+#### Factory method
+
+The interface provides the `UserNodeConfiguration getUserNodeConfigurationFor(Path)` factory method to create new instances for new treenodes on demand. This method may be implemented in several ways, e.g.:
+
+* as a *Singleton* for simple configurations (see "The SimpleUserNodeConfiguration class" below)
+* as a POJO, simply returning a new instance per call, to provide a per node configuration
+* as a *Prototype* to pass around an initially given global configuration object in addition.
+
+#### Tree node creation
+
+When you think about what would be configurable in general for a tree node, you may identify essentially two main things:
+
+1. A tree node for a specific directory or file may be *created* or not, and
+2. if a tree node is created, it my be conceptually an *inner* or a *leaf* node, that is it may be allowed to have children or not.
+
+The first aspect can be controlled via the `isCreatingNodeForDirectory(Path directory)` and `isCreatingNodeForFile(Path file)`, the second via the `isLeafNode(Path)` Path predicates.
+
+A *directory node* unsurprisingly will create subnodes for the directory entries. A *file node* can mount a subtree for a `java.nio.file.FileSystem` created on demand, e.g. a Zip FileSystem from  a `*.zip` file. (You might even place your custom configuration file describing any resource, e.g. `device=/dev/sdx7` to integrate some native functionality.)
+
+Creation of custom FileSystems is controlled via the `createFileSystemFor(Path file)` method (obviously the `isCreatingNodeForFile(Path file)` must return `true` for that path), and the `onClosingFileSystem(FileSystem)` method, which allows for cleanup of resources when a treenode is collapsed.
+
+#### Notifications
+
+When a client wants to change the state of the component (e.g. to switch between *showing* or *hiding* hidden directories), it needs a way to notify the component about the change.
+
+The client can request to recieve a notification callback object by overwriting the `boolean isRequestingUpdateNotifier()` method to return true.
+
+In this case, the component will call the `setUpdateNotifier(Runnable callback)` method  for each created node to provide a callback object the client has to remember. Whenever the client wants the component to adjust itself to a changed state, it has to call the `run()` method of the callback.
+
+#### Listing
+
     public interface UserNodeConfiguration
     {
-      /**
-       * The default link options, an empty array, which means that symbolic links
-       * are always followed.
-       */
       LinkOption[] DEFAULT_LINK_OPTIONS = new LinkOption[0];
 
-      /**
-       * Returns the matching LinkOptions. By default returns the
-       * {@link #DEFAULT_LINK_OPTIONS}.
-       *
-       * @return the matching LinkOptions
-       * @see LinkOption#NOFOLLOW_LINKS
-       */
       default LinkOption[] getLinkOptions()
       {
         return DEFAULT_LINK_OPTIONS;
       }
 
-      /**
-       * A predicate to indicate which subdirectories to create a node for. The
-       * default implementation returns true for non hidden directories.
-       *
-       * @param directory a path to a directory (never {@code null})
-       * @return true, if a node should be created for the given subdirectory
-       */
       default boolean isCreatingNodeForDirectory(Path directory)
       {
         try
@@ -52,109 +77,41 @@ For now, there is a listing of …
         }
       }
 
-      /**
-       * A predicate to indicate which files to create a node for. The default
-       * implementation returns always false.
-       *
-       * @param file a path to a file (never {@code null})
-       * @return true, if a node should be created for the given file
-       * @see #createFileSystemFor(Path)
-       */
       default boolean isCreatingNodeForFile(Path file)
       {
         return false;
       }
 
-      /**
-       * This method can optionally return a FileSystem for a file path. E.g. the
-       * method could create a Zip file system for a given {@code *.zip} file. In
-       * this case, the {@link #isCreatingNodeForFile(Path)} method must return
-       * {@code true}.
-       *
-       * @param file a path to a file (never {@code null})
-       * @return a new FileSystem for the file or {@code null}. The default
-       *         implementation always returns {@code null}.
-       */
       default @Nullable
       FileSystem createFileSystemFor(Path file)
       {
         return null;
       }
 
-      /**
-       * This method is called when a FileSystem is to be closed. Whenever a
-       * {@link FileSystem}, which has been created by
-       * {@link #createFileSystemFor(Path)}, is about to be closed, the client is
-       * responsible for releasing all related resources. (An exception is the
-       * {@link java.nio.file.FileSystems#getDefault() default file system} which
-       * will never be closed.) This method does nothing by default.
-       *
-       * @param fileSystem the FileSystem to be closed
-       */
       default void onClosingFileSystem(FileSystem fileSystem)
       {
       }
 
-      /**
-       * If this method returns true, the node is conceptually treated as a leaf
-       * node. A client might want to hide the physical directory structure below
-       * special directories. E.g. for directories named "{@code DCIM}",
-       * "{@code .svn}" or "{@code .git}", the client might want to display a
-       * logical view to a {@code DCF} file system, or a Subversion or Git client.
-       *
-       * @param path the path corresponding to this node
-       * @return true to request the node acting as a leaf node. The default
-       *         implementation always returns false.
-       */
       default boolean isLeafNode(Path path)
       {
         return false;
       }
 
-      /**
-       * To receive an update notifier callback object for the corresponding tree
-       * node, this method must return true. The callback will be provided
-       * immediately after creation via {@link #setUpdateNotifier(Runnable)}.
-       * <em>Note:</em> Only the instances returned by
-       * {@link #getUserNodeConfigurationFor(Path)} will have called
-       * {@link #setUpdateNotifier(Runnable) setUpdateNotifier(callback)}, not the
-       * prototype instance initially given with the {@link Configuration}.
-       *
-       * @return true to request an update notifier (the default implementation
-       *         returns false)
-       */
       default boolean isRequestingUpdateNotifier()
       {
         return false;
       }
 
-      /**
-       * Set a notifier callback for tree node updates. If an application wants to
-       * have a node updated as a result of a change of its configuration state
-       * (e.g. to switch between showing/hiding hidden directory entries), it must
-       * remember the provided Runnable and run it to update the node. The default
-       * implementation does nothing.
-       *
-       * @param callback a callback to update the corresponding tree node
-       * @see #isRequestingUpdateNotifier()
-       */
-      default void setUpdateNotifier(@Nullable Runnable callback)
+      default void setUpdateNotifier(Runnable callback)
       {
       }
 
-      /**
-       * Factory method to create configurations per node. Depending on the desired
-       * configuration, this method may be implemented differently:
-       * <ul>
-       * <li>In case that no node specific configuration is desired, the same global
-       * instance, e.g. a stateless singleton, can be returned in all cases.</li>
-       * <li>In case a node specific configuration is desired, a different instance
-       * can be returned for each path, holding its on state per path.</li>
-       * </ul>
-       *
-       * @param path the path of the node to configure
-       * @return an instance of this type
-       */
       UserNodeConfiguration getUserNodeConfigurationFor(Path path);
     }
+
+### The SimpleUserNodeConfiguration class
+
+The `SimpleUserNodeConfiguration` class provides a simple default configuration which is used by default in the configuration builder.
+
+Since the `UserNodeConfiguration` interface has useful default implementations for all methods but the factory method, the `SimpleUserNodeConfiguration` class only adds an implementation for this method to return a singleton instance.
 

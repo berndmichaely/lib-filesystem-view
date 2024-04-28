@@ -1,0 +1,13 @@
+rootProject.name = 'common-filesystem-view-fx'
+
+boolean useLocalProject = true
+
+def baseModule = 'de.bernd-michaely:common-filesystem-view-base'
+def baseDir = '../lib-filesystem-view-base'
+
+if (useLocalProject && file(baseDir + '/build.gradle').isFile()) {
+	includeBuild baseDir
+	logger.lifecycle "==> Including local project for »${baseModule}«"
+} else {
+	logger.lifecycle "==> Using external dependency for »${baseModule}«"
+}
