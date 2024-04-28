@@ -1,0 +1,109 @@
+' Usage of FileSystemTreeView modules
+'
+@startuml
+
+skinparam title {
+	BorderRoundCorner 15
+	BorderThickness 2
+	BackgroundColor Aqua-CadetBlue
+}
+
+skinparam packageStyle Frame
+
+title FileSystemTreeView modules – API
+
+package common-filesystem-view-base #Ivory {
+	
+	together {
+		struct Configuration 
+		class Builder
+	}
+
+	together {
+		class SimpleUserNodeConfiguration
+		interface IFileSystemTreeView
+	}
+
+	interface UserNodeConfiguration {
+		DEFAULT_LINK_OPTIONS : LinkOption[]
+
+		LinkOption[] getLinkOptions()
+		boolean isCreatingNodeForDirectory(Path directory)
+		boolean isCreatingNodeForFile(Path file)
+		@Nullable FileSystem createFileSystemFor(Path file)
+		void onClosingFileSystem(FileSystem fileSystem)
+		boolean isLeafNode(Path path)
+		boolean isRequestingUpdateNotifier()
+		void setUpdateNotifier(@Nullable Runnable callback)
+		UserNodeConfiguration getUserNodeConfigurationFor(Path path)
+	}
+
+	class SimpleUserNodeConfiguration implements UserNodeConfiguration {
+		+ {static} SimpleUserNodeConfiguration getInstance()
+	}
+
+	class Builder {
+		+ Builder setFileSystem(@Nullable FileSystem fileSystem)
+		+ Builder setRequestingWatchService(boolean requestingWatchService)
+		+ Builder setFileNameComparator(@Nullable Comparator<String> fileNameComparator)
+		+ Builder setUserNodeConfiguration(@Nullable UserNodeConfiguration userNodeConfiguration)
+		+ Configuration build()
+	}
+
+	struct Configuration {
+		+ {static} Builder builder()
+	}
+
+	Configuration +-- Builder
+
+	Builder --> UserNodeConfiguration
+
+	interface Closeable as "java.io.Closeable" {
+		void close() throws IOException
+	}
+
+	interface IFileSystemTreeView extends Closeable {
+		@Nullable Path expandPath(@Nullable Path absolutePath, boolean expandLastElement, boolean select)
+		void clearSelection()
+		@Nullable Path getSelectedPath()
+		boolean isPathSelected()
+		SortedSet<Path> getExpandedPaths()
+		void updateTree()
+	}
+}
+' end package common-filesystem-view-base
+
+package common-filesystem-view-swing #PowderBlue {
+
+	interface JFileSystemTreeView {
+		{static} JFileSystemTreeView createInstance()
+		{static} JFileSystemTreeView createInstance(@Nullable Configuration configuration)
+		javax.swing.JComponent getComponent()
+		javax.swing.JTree getTree()
+		void addPathSelectionListener(Consumer<@Nullable Path> consumer)
+		boolean removePathSelectionListener(Consumer<@Nullable Path> consumer)
+	}
+
+	IFileSystemTreeView <|-- JFileSystemTreeView
+	JFileSystemTreeView --> Configuration
+}
+' end package common-filesystem-view-swing
+
+package common-filesystem-view-fx #Thistle {
+
+	interface FileSystemTreeView {
+		{static} FileSystemTreeView createInstance()
+		{static} FileSystemTreeView createInstance(@Nullable Configuration configuration)
+		javafx.scene.layout.Region getComponent()
+		javafx.scene.control.TreeView<PathView> getTreeView()
+		ReadOnlyObjectProperty<@Nullable Path> selectedPathProperty()
+		ReadOnlyBooleanProperty pathSelectedProperty()
+	}
+
+	IFileSystemTreeView <|-- FileSystemTreeView
+	FileSystemTreeView --> Configuration
+}
+' end package common-filesystem-view-fx
+
+@enduml
+

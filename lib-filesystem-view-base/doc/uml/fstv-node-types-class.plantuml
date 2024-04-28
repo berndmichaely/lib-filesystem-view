@@ -1,0 +1,107 @@
+' FileSystemTreeView node types
+
+@startuml
+
+skinparam title {
+	BorderRoundCorner 15
+	BorderThickness 2
+	BackgroundColor Aqua-CadetBlue
+}
+
+skinparam packageStyle Frame
+
+title FileSystemTreeView node types
+
+package base #Ivory {
+
+	together {
+		abstract class PathView
+		interface RootNodeCtrl
+	}
+
+	interface Closeable as "java.io.Closeable" {
+		void close() throws IOException
+	}
+
+	abstract class PathView {
+		+ Path getPath()
+		+ String getName()
+	}
+
+	interface RootNodeCtrl extends Closeable {
+		NodeView getNodeView()
+		PathSelection getPathSelection()
+		void setExpanded(boolean expanded)
+		NodeView expandPath(Path absolutePath, boolean expandLastElement)
+		void updateTree()
+		SortedSet<Path> getExpandedPaths()
+		void setExpandedPaths(Iterable<Path> paths)
+	}
+}
+
+package base.ctrl {
+
+	together {
+		abstract class NodeCtrl
+		abstract class NodeCtrlFileSystemRoots
+		class NodeCtrlDirectory
+		class NodeCtrlFileSystemRootsGlobal
+		class NodeCtrlFileSystemRootsCustom
+	}
+
+	together {
+		abstract class DirectoryEntry
+		class DirectoryEntrySubDirectory
+		class DirectoryEntryRegularFile
+	}
+
+	abstract class DirectoryEntry extends base.PathView {
+
+		{abstract} ~ NodeCtrl getNodeCtrl()
+		+ void handleNodeExpansion(boolean expand)
+	}
+
+	class DirectoryEntrySubDirectory extends DirectoryEntry {
+		NodeCtrlDirectory getNodeCtrl()
+	}
+
+	class DirectoryEntryRegularFile extends DirectoryEntry {
+		NodeCtrlFileSystemRootsCustom getNodeCtrl()
+	}
+
+	DirectoryEntrySubDirectory --> NodeCtrlDirectory
+	DirectoryEntryRegularFile --> NodeCtrlFileSystemRootsCustom
+
+	abstract class NodeCtrl {
+		+NodeView getNodeView()
+		~ DirectoryEntry getDirectoryEntry()
+		~ SubNodes getSubNodes()
+		~ NodeConfig getNodeConfig()
+		~ UserNodeConfiguration getUserNodeConfiguration()
+		{abstract} ~ void updateDirectoryEntries()
+	}
+
+	NodeCtrl --> DirectoryEntry
+
+	abstract class NodeCtrlFileSystemRoots extends NodeCtrl {
+		~ FileSystem getFileSystem()
+	}
+
+	class NodeCtrlDirectory {
+		~ void updateDirectoryEntries()
+	}
+
+	NodeCtrlDirectory --|> NodeCtrl
+
+	class NodeCtrlFileSystemRootsGlobal extends NodeCtrlFileSystemRoots implements base.RootNodeCtrl {
+		~ void updateDirectoryEntries()
+	}
+
+	class NodeCtrlFileSystemRootsCustom extends NodeCtrlFileSystemRoots {
+		- boolean isSkippingSingleRoot()
+		~ void updateDirectoryEntries()
+	}
+}
+
+@enduml
+

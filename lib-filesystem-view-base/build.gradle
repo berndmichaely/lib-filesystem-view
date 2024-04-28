@@ -1,0 +1,158 @@
+plugins {
+	id 'java-library'
+	id 'jacoco'
+	id 'maven-publish'
+	id 'org.checkerframework' version '0.6.37' apply false
+}
+
+apply plugin: 'org.checkerframework'
+
+wrapper {
+	gradleVersion '8.6'
+}
+
+group = 'de.bernd_michaely'
+version = '0.9'
+
+ext.versionJUnit = '5.9.2'
+ext.versionCheckerFramework = '3.42.0'
+
+jacoco {
+	toolVersion = '0.8.10'
+}
+
+final boolean deactivateCheckerFramework = false
+final boolean enableUmlDoclet = false
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	withJavadocJar()
+	withSourcesJar()
+}
+
+logger.lifecycle "Running Gradle $project.gradle.gradleVersion"
+logger.lifecycle "Java source level           : ${java.sourceCompatibility}"
+logger.lifecycle "Compile      -> Debug-Level : ${compileJava.options.debug}"
+logger.lifecycle "Test-Compile -> Debug-Level : ${compileTestJava.options.debug}"
+logger.lifecycle "Modularity enabled          : ${java.modularity.inferModulePath.get()}"
+logger.lifecycle "==> Root project »$name ($version)«"
+logger.lifecycle " -> Base dir is »${file('.')}«"
+logger.lifecycle " -> Using »JUnit $versionJUnit«"
+logger.lifecycle " -> Using »JaCoCo ${jacoco.toolVersion}«"
+logger.lifecycle " -> Using »Checker Framework $versionCheckerFramework«"
+logger.lifecycle "    -> Checker Framework is ${deactivateCheckerFramework ? 'DEACTIVATED!' : 'active.'}"
+logger.lifecycle " -> Included child projects : »${childProjects.keySet()}«"
+logger.lifecycle " -> Maven coordinates »${group}:${name}:${version}«"
+
+repositories {
+	mavenCentral()
+}
+
+if (enableUmlDoclet) {
+	configurations {
+		umlDoclet
+	}
+}
+
+dependencies {
+	// Checker Framework:
+	// https://checkerframework.org
+	// https://github.com/kelloggm/checkerframework-gradle-plugin
+  implementation "org.checkerframework:checker-qual:$versionCheckerFramework"
+  checkerFramework "org.checkerframework:checker:$versionCheckerFramework"
+	
+	if (enableUmlDoclet) {
+		// https://github.com/talsma-ict/umldoclet
+		umlDoclet "nl.talsmasoftware:umldoclet:2.1.1"
+	}
+}
+
+tasks.named('test') {
+	logger.lifecycle "=> Configuring task »$name« for JUnit"
+	systemProperty 'java.util.logging.config.file', file('src/test/java/logging.properties')
+	// Use JUnit Platform for unit tests.
+	useJUnitPlatform()
+	logger.lifecycle "   -> JVM args : $jvmArgs"
+}
+
+testing {
+	suites {
+		test {
+			useJUnitJupiter(versionJUnit)
+			dependencies {
+				implementation 'com.google.jimfs:jimfs:1.2'
+			}
+		}
+	}
+}
+
+jacocoTestReport {
+	dependsOn test
+	doLast {
+		final File jacocoReportsDir = reports.html.outputLocation.asFile.get()
+		final URL jacocoReportsUrl = new URL("file", null, "${jacocoReportsDir}/index.html")
+		logger.lifecycle " -> JaCoCo reports in »${jacocoReportsUrl}«"
+	}
+}
+
+checkerFramework {
+  checkers += 'org.checkerframework.checker.nullness.NullnessChecker'
+  skipCheckerFramework = deactivateCheckerFramework
+	excludeTests = true
+}
+
+tasks.withType(JavaCompile) {
+	logger.lifecycle "=> Configuring task »$name«"
+	options.compilerArgs += '-Xlint:unchecked'
+	options.compilerArgs += '-Xlint:deprecation'
+	options.compilerArgs += '-Xdiags:verbose'
+	logger.lifecycle "   -> compiler args : ${options.compilerArgs}"
+}
+
+javadoc {
+	doLast {
+		copy {
+			from 'doc/uml'
+			include '*.svg'
+			into "${javadoc.destinationDir}/uml"
+		}
+	}
+	def headerPrefix = '<div style="margin-top:14px;"><strong>'
+	def headerPostfix = '</strong></div>'
+	def header = headerPrefix + project.name + " (" + project.version + ')' + headerPostfix
+	options.header header
+	options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility.getMajorVersion()}/docs/api"
+	options.links 'https://checkerframework.org/api'
+	options.windowTitle project.version
+	options.use true
+	
+	if (enableUmlDoclet) {
+		//source = sourceSets.main.allJava
+		options.docletpath = configurations.umlDoclet.files.asType(List)
+		options.doclet = "nl.talsmasoftware.umldoclet.UMLDoclet"
+		//options.addStringOption "additionalParamName", "additionalParamValue"
+	}
+}
+
+task checkModuleNamingConvention (type: org.gradle.CheckModuleNamingConvention) {}
+//check.dependsOn checkModuleNamingConvention
+clean.dependsOn checkModuleNamingConvention
+
+publishing {
+	publications {
+		libCommonFilesystemViewBase(MavenPublication) {
+			from components.java
+      pom {
+        name = 'common-filesystem-view-base'
+        description = 'Base module for a file system view containing the common control logic'
+        url = 'https://bernd-michaely.de'
+        licenses {
+          license {
+            name = 'Apache License, Version 2.0'
+            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+        }
+      }
+		}
+	}
+}

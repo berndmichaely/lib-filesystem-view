@@ -1,0 +1,320 @@
+/'
+	Sequence diagram for interaction between
+	FileSystemTreeView component and
+	UI, FileSystem and WatchService
+'/
+@startuml
+
+' background color related to main component
+!$color_bg_main = "#aedfff"
+
+' background color for WatchService related elements
+!$color_bg_ws = "#ffebd0"
+
+' background color for critical groups
+!$color_bg_critical = "#ffd0d0"
+
+' default background color for groups
+!$color_bg_group = "#fdfcff"
+
+!$title_collapse_node = "Collapse UI Node"
+
+skinparam title {
+	BorderRoundCorner 15
+	BorderThickness 2
+	BackgroundColor $color_bg_main
+}
+
+skinparam sequence {
+	MessageAlign center
+	GroupBorderColor #DarkKhaki
+	GroupBackgroundColor #DarkSlateBlue
+	GroupHeaderFontColor #White
+	LifeLineBackgroundColor #Linen
+	LifeLineBorderColor #DimGrey
+}
+
+title = FileSystemTreeView (Base Module)
+
+legend top center
+	This diagram describes the internal interaction of the **FileSystemTreeView** base component with UI, FileSystem and WatchService.
+	----
+	**Tree UI**: the actual implementation of the UI of the whole tree
+	(part of the FileSystemTreeView implementation, e.g. an encapsulation of a Swing ""JTree"" or JavaFX ""TreeView"")
+	----
+	**NodeControl**: the main controller for a single tree node – the global root node is an instance of interface RootNodeCtrl
+	(see class diagram for NodeControl type hierarchie)
+	----
+	**NodeView**: interface describing the abstract UI functionality for a single tree node UI
+	(implementations will e.g. encapsulate a Swing MutableTreeNode or a JavaFX TreeItem)
+	----
+	**SubNodes**: synchronized object containing a single tree node's
+	· Expansion State
+	· Sub Node List
+endlegend
+
+' ####################
+' ### Participants ###
+' ####################
+
+actor				UI									as UI $color_bg_main
+
+participant	FileSystemTreeView	as Fstv << (I,#ac9fe2) >> $color_bg_main
+
+participant	"Tree UI" as Tree
+
+collections NodeControl as nodes
+
+collections NodeView as view << (I,#ac9fe2) >>
+
+collections	SubNodes $color_bg_critical
+
+control			WatchServiceCtrl		as WSctrl $color_bg_ws
+control			WatchThread					as thread $color_bg_ws
+control			WatchKey						as wkey $color_bg_ws
+entity			WatchService				as WS $color_bg_ws
+
+database		FileSystem					as FS #PowderBlue-MediumSlateBlue
+
+activate FS
+
+|||
+
+' ==============
+' === Groups ===
+' ==============
+
+group $color_bg_group Create Component
+
+UI				-> Fstv				: create
+activate Fstv
+Fstv			-> Tree				: create
+activate Tree
+Fstv			-> nodes			:	create
+note right							: instance of RootNodeCtrl
+activate nodes
+nodes			-> view				: create
+note right							: via NodeView factory
+activate view
+nodes			-> SubNodes		: create
+activate SubNodes
+nodes			-> SubNodes		: expand
+SubNodes	--> nodes			: call back expansionHandler
+nodes			--> view			: expand
+view			-->	Tree			: expand
+Fstv			-> WSctrl			: create
+activate WSctrl
+
+opt $color_bg_ws WatchService requested
+
+WSctrl		-> FS					: request WatchService
+FS				-> WS					: create WatchService
+activate WS
+WS				--> WSctrl		: get WatchService
+WSctrl		-> thread			: create
+activate thread
+
+end 'opt WatchService requested
+
+|||
+
+end 'group Create Component
+
+|||
+
+' ============================================================================
+
+group $color_bg_group Expand UI Node
+
+|||
+
+alt Node expansion event by tree
+
+UI				-> Tree				: expand tree node
+note right							: e.g. via Swing JTree
+Tree			-> nodes			: expand node ctrl
+
+else Node expansion event by tree node
+
+UI				-> view				: expand tree node
+note right							: e.g. via JavaFX TreeItem
+view			-> nodes			: expand node ctrl
+
+end 'alt Node expansion
+
+nodes			-> SubNodes		: expand
+
+critical $color_bg_critical synchronized
+
+SubNodes	-> SubNodes		: set expansion state to true
+SubNodes	-->	nodes			: call back expansionHandler
+activate SubNodes
+nodes			-->	view			: expand node view
+view			-->	Tree			: expand node view
+nodes			--> FS				: read FileSystem roots or directory entries
+FS				--> nodes			: get DirectoryEntries filtered by UserNodeConfiguration
+nodes			--> SubNodes	: synchronize SubNodes
+SubNodes	--> view			: create ALL NodeViews
+deactivate SubNodes
+
+end 'critical synchronized
+
+view			--> Tree			: create ALL UI nodes [invokeLater]
+
+opt $color_bg_ws WatchService requested
+
+nodes			-> WSctrl			: start watching this directory, providing callback
+WSctrl		-> WS					: register this directory
+WS				--> FS				: watches directory
+WS				--> wkey			: provide Watch Key
+activate wkey
+wkey			--> WSctrl		: map directory with\n(WatchKey, callback)
+
+end 'opt WatchService requested
+
+|||
+
+end 'group Expand UI Node
+
+' ============================================================================
+
+|||
+
+' ============================================================================
+
+group $color_bg_ws WatchService related actions
+
+FS				-> WS					: directory creation
+WS				-> wkey				: notify
+wkey			-> thread			: wake up
+thread		-> WSctrl			: poll event
+WSctrl		-> nodes			: run callback
+activate nodes
+
+alt $color_bg_critical Directory created
+
+nodes		 	--> SubNodes	: create new SubNode
+SubNodes 	--> nodes			: callback onAdd
+activate nodes
+nodes			--> view			: create new NodeView
+deactivate nodes
+view		 	--> Tree			: add new directory
+
+else Directory deleted
+
+nodes		 	--> SubNodes	: delete SubNode
+SubNodes 	--> nodes			: callback onRemove
+activate nodes
+nodes			--> Tree			: clear selected path if\ncontained in subnodes
+nodes		 	--> view			: delete NodeView
+deactivate nodes
+view		 	--> Tree			: remove directory
+
+else Overflow event
+
+nodes			--> FS				: read FileSystem roots or directory entries
+FS				--> nodes			: get DirectoryEntries filtered by UserNodeConfiguration
+nodes			--> SubNodes	: synchronize SubNodes
+
+end 'alt Directory created
+
+deactivate nodes
+
+|||
+
+end 'group WatchService related actions
+
+|||
+
+group $color_bg_group $title_collapse_node
+
+|||
+
+alt Node collapse event by tree
+
+UI				-> Tree				: collapse\ntree node
+Tree			-> nodes			: collapse node ctrl
+
+else Node collapse event by tree node
+
+UI				-> view				: collapse tree node
+view			-> nodes			: collapse node ctrl
+
+end 'alt Node collapse
+
+opt $color_bg_ws WatchService requested
+
+nodes			-> WSctrl			: stop watching this directory
+WSctrl		-> WS					: unregister this directory
+WS				--> wkey			: cancel Watch Key
+wkey			--> WSctrl		: remove Watch Key
+
+destroy wkey
+
+end 'opt WatchService requested
+
+critical $color_bg_critical synchronized
+
+nodes			-> SubNodes		: clear
+SubNodes	--> nodes			: run onClear callback
+activate nodes
+nodes			--> Tree			: clear selected path if\ncontained in subnodes
+nodes			--> SubNodes	: collapse all SubNodes recursively
+nodes			--> SubNodes	: remove
+destroy SubNodes
+nodes			-->	view			: collapse node view
+deactivate nodes
+
+end 'critical synchronized
+
+view			-->	Tree			: collapse node view
+destroy view
+
+|||
+
+end 'group Collapse UI Node
+
+' ============================================================================
+
+|||
+
+group $color_bg_group Close Component
+
+UI				->	Fstv			: close
+Fstv			->	nodes			: close root node
+nodes			->	nodes			: run »$title_collapse_node«
+nodes			->	Fstv			: Root node closed
+deactivate nodes
+Fstv			->	WSctrl		: close
+
+opt $color_bg_ws WatchService requested
+
+WSctrl		->	WS				: close
+WS				--> thread		: ClosedWatchServiceException
+destroy thread
+WS				->	WSctrl		: closed
+deactivate WS
+
+end 'opt WatchService requested
+
+WSctrl		->	Fstv			: closed
+deactivate WSctrl
+
+Tree			->	Fstv			: closed
+deactivate Tree
+
+Fstv			->	UI				: closed
+deactivate Tree
+
+deactivate Fstv
+
+|||
+
+end 'group Close
+
+|||
+
+deactivate FS
+
+@enduml
+
