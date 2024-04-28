@@ -1,6 +1,6 @@
 # [lib-filesystem-view](https://github.com/berndmichaely/jem/lib-common/lib-filesystem-view)
 
-![version](lib-filesystem-view-base/doc/shields/lib-filesystem-view 0.9.svg "version")
+![version](lib-filesystem-view-base/doc/shields/lib-filesystem-view.svg "version")
 
 by [Bernd Michaely](https://bernd-michaely.de/en)
 
