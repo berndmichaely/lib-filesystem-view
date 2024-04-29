@@ -2,8 +2,6 @@
 
 ![version](lib-filesystem-view-base/doc/shields/lib-filesystem-view.svg "version")
 
-by [Bernd Michaely](https://bernd-michaely.de/en)
-
 This directory contains the modules of the `lib-filesystem-view` library consisting of the modules:
 
 * `lib-filesystem-view-base`
