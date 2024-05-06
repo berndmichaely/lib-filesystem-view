@@ -37,12 +37,12 @@ public final class NodeCtrlDirectory extends NodeCtrl
 {
   private static final Logger logger = System.getLogger(NodeCtrlDirectory.class.getName());
 
-  private NodeCtrlDirectory(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
+  private NodeCtrlDirectory(DirectoryEntrySubDirectory directoryEntry, NodeConfig nodeConfig)
   {
     super(directoryEntry, nodeConfig);
   }
 
-  static NodeCtrlDirectory create(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
+  static NodeCtrlDirectory create(DirectoryEntrySubDirectory directoryEntry, NodeConfig nodeConfig)
   {
     final var nodeCtrl = new NodeCtrlDirectory(directoryEntry, nodeConfig);
     nodeCtrl.postInit().getNodeView();
@@ -69,7 +69,7 @@ public final class NodeCtrlDirectory extends NodeCtrl
     else if (Files.isRegularFile(path, linkOptions))
     {
       return unc.isCreatingNodeForFile(path) ?
-        new DirectoryEntryRegularFile(path) : null;
+        new DirectoryEntryRegularFile(path, unc) : null;
     }
     else
     {
@@ -82,10 +82,11 @@ public final class NodeCtrlDirectory extends NodeCtrl
   {
     try (final Stream<Path> stream = Files.list(getDirectoryEntry().getPath()))
     {
-      // Note: filter(Objects::nonNull) currently won't work, see:
-      // https://github.com/typetools/checker-framework/issues/5237
       final SortedSet<DirectoryEntry> sortedSet = new TreeSet<>(
         getNodeConfig().getDirectoryEntryComparatorSupplier().get());
+      // stream.map(this::pathToDirectoryEntry).filter(Objects::nonNull).forEach(sortedSet::add);
+      // Note: filter(Objects::nonNull) currently won't work, see:
+      // https://github.com/typetools/checker-framework/issues/5237
       stream.forEach(path ->
       {
         final var entry = pathToDirectoryEntry(path);

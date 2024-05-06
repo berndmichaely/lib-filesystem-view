@@ -19,7 +19,7 @@ import de.bernd_michaely.common.filesystem.view.base.common.SynchronizableSorted
 import java.util.AbstractList;
 import java.util.Comparator;
 import java.util.RandomAccess;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.*;
 
 import static java.util.Collections.binarySearch;
 
@@ -31,38 +31,38 @@ import static java.util.Collections.binarySearch;
  */
 final class SubNodesPathView extends AbstractList<String> implements RandomAccess
 {
-  private final SynchronizableSortedDistinctList<DirectoryEntry> list;
-  private final Comparator<String> comparator;
+	private final SynchronizableSortedDistinctList<DirectoryEntry> list;
+	private final Comparator<String> comparator;
 
-  SubNodesPathView(SynchronizableSortedDistinctList<DirectoryEntry> list, Comparator<String> comparator)
-  {
-    this.list = list;
-    this.comparator = comparator;
-  }
+	SubNodesPathView(SynchronizableSortedDistinctList<DirectoryEntry> list, Comparator<String> comparator)
+	{
+		this.list = list;
+		this.comparator = comparator;
+	}
 
-  @Override
-  public String get(int index)
-  {
-    final DirectoryEntry entry = list.get(index);
-    return entry != null ? entry.getName() : "";
-  }
+	@Override
+	public String get(int index)
+	{
+		final DirectoryEntry entry = list.get(index);
+		return entry != null ? entry.getName() : "";
+	}
 
-  @Override
-  public int size()
-  {
-    return list.size();
-  }
+	@Override
+	public int size()
+	{
+		return list.size();
+	}
 
-  /**
-   * Find a list item by path name.
-   *
-   * @param name the name to search for
-   * @return the entry found or {@code null}
-   */
-  @Nullable
-  DirectoryEntry findNodeByName(String name)
-  {
-    final int index = binarySearch(this, name, comparator);
-    return index >= 0 ? list.get(index) : null;
-  }
+	/**
+	 * Find a list item by path name.
+	 *
+	 * @param pathName the path name to search for
+	 * @return the entry found or {@code null}
+	 */
+	@Nullable
+	DirectoryEntry findNodeByName(String pathName)
+	{
+		final int index = binarySearch(this, pathName, comparator);
+		return index >= 0 ? list.get(index) : null;
+	}
 }

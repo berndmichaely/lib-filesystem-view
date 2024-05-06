@@ -18,15 +18,25 @@ package de.bernd_michaely.common.filesystem.view.base.ctrl;
 import de.bernd_michaely.common.filesystem.view.base.NodeView;
 import de.bernd_michaely.common.filesystem.view.base.UserNodeConfiguration;
 import de.bernd_michaely.common.filesystem.view.base.common.SynchronizableSortedDistinctList;
+import java.io.IOException;
 import java.lang.System.Logger;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Consumer;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.*;
 
+import static de.bernd_michaely.common.filesystem.view.base.ctrl.SubNodes.ExpansionState.*;
 import static java.lang.System.Logger.Level.*;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 /**
  * Class for synchronized access to directory entry sub nodes.
@@ -41,9 +51,31 @@ public final class SubNodes
   private final NodeConfig nodeConfig;
   private final UserNodeConfiguration userNodeConfiguration;
   private final NodeView nodeView;
-  private boolean expanded;
-  private @Nullable Consumer<Boolean> expansionHandler;
+  private ExpansionState expansionState = COLLAPSED;
+  @Deprecated private @Nullable Consumer<Boolean> expansionHandler;
   private final SubNodesPathView subNodesPathView;
+
+  enum ExpansionState
+  {
+    COLLAPSED(false), EXPANDING(true), EXPANDED(true);
+
+    private final boolean targetState;
+
+    ExpansionState(boolean targetState)
+    {
+      this.targetState = targetState;
+    }
+
+    boolean getTargetState()
+    {
+      return targetState;
+    }
+
+    static ExpansionState getTargetState(boolean expanded)
+    {
+      return expanded ? EXPANDED : COLLAPSED;
+    }
+  }
 
   /**
    * Internal, package local interface to notify unit tests about watch service
@@ -146,6 +178,7 @@ public final class SubNodes
     return nodeView;
   }
 
+  @Deprecated
   void setExpansionHandler(@Nullable Consumer<Boolean> expansionHandler)
   {
     this.expansionHandler = expansionHandler;
@@ -159,19 +192,190 @@ public final class SubNodes
 
   synchronized boolean isExpanded()
   {
-    return expanded;
+    return expansionState.getTargetState();
   }
 
   synchronized void setExpanded(boolean expanded)
   {
-    if (this.expanded != expanded)
+    if (isExpanded() != expanded)
     {
-      this.expanded = expanded;
+      if (expanded)
+      {
+        expansionState = EXPANDING;
+        try
+        {
+          doExpand();
+        }
+        finally
+        {
+          expansionState = EXPANDED;
+        }
+      }
+      else
+      {
+        try
+        {
+          doCollapse();
+        }
+        finally
+        {
+          expansionState = COLLAPSED;
+        }
+      }
       if (expansionHandler != null)
       {
         expansionHandler.accept(expanded);
       }
     }
+  }
+
+  /**
+   * Applies path filters and returns a new DirectoryEntry or null. This method
+   * is to be used for node expansion and for watch service.
+   *
+   * @param path the Path to encapsulate
+   * @return a new DirectoryEntry or null
+   */
+  private @Nullable
+  DirectoryEntry pathToDirectoryEntry(Path path)
+  {
+    final var unc = getUserNodeConfiguration();
+    final var linkOptions = unc.getLinkOptions();
+    if (Files.isDirectory(path, linkOptions))
+    {
+      return unc.isCreatingNodeForDirectory(path) ?
+        new DirectoryEntrySubDirectory(path) : null;
+    }
+    else if (Files.isRegularFile(path, linkOptions))
+    {
+      return unc.isCreatingNodeForFile(path) ?
+        new DirectoryEntryRegularFile(path, unc) : null;
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  synchronized private void doExpand()
+  {
+    getNodeView().setExpanded(true);
+    if (directoryEntry instanceof DirectoryEntrySubDirectory entry)
+    {
+      readDirectory(entry.getPath());
+    }
+    else if (directoryEntry instanceof DirectoryEntryRegularFile entry)
+    {
+      readFileSystem(entry.getCustomFileSystem());
+    }
+    else if (directoryEntry instanceof DirectoryEntryFileSystem entry)
+    {
+      readFileSystem(entry.getFileSystem());
+    }
+  }
+
+  private void readFileSystem(@Nullable FileSystem fileSystem)
+  {
+    if (fileSystem != null)
+    {
+      if (fileSystem.isOpen())
+      {
+        final SortedSet<DirectoryEntry> set = new TreeSet<>(
+          getNodeConfig().getDirectoryEntryComparatorSupplier().get());
+        fileSystem.getRootDirectories().forEach(path -> set.add(new DirectoryEntrySubDirectory(path)));
+        if (set.size() == 1 && set.first().getName().equals("/"))
+        {
+          readDirectory(fileSystem.getPath("/"));
+        }
+        else
+        {
+          subNodes.synchronizeTo(set);
+        }
+      }
+      else
+      {
+        logger.log(WARNING, getClass() +
+          "#doUpdateDirectoryEntries(FileSystem) : FileSystem not open : " + fileSystem);
+      }
+    }
+  }
+
+  private void readDirectory(Path directory)
+  {
+    try (final Stream<Path> stream = Files.list(directory))
+    {
+      final SortedSet<DirectoryEntry> sortedSet = new TreeSet<>(
+        getNodeConfig().getDirectoryEntryComparatorSupplier().get());
+      // stream.map(this::pathToDirectoryEntry).filter(Objects::nonNull).forEach(sortedSet::add);
+      // Note: filter(Objects::nonNull) currently won't work, see:
+      // https://github.com/typetools/checker-framework/issues/5237
+      stream.forEach(path ->
+      {
+        final var entry = pathToDirectoryEntry(path);
+        if (entry != null)
+        {
+          sortedSet.add(entry);
+        }
+      });
+      subNodes.synchronizeTo(sortedSet);
+    }
+    catch (AccessDeniedException ex)
+    {
+      logger.log(INFO, "Access denied for path »" + ex.getFile() + "«");
+    }
+    catch (IOException ex)
+    {
+      logger.log(WARNING, ex.toString());
+    }
+    postExpand();
+  }
+
+  private void postExpand()
+  {
+    getNodeConfig().getWatchServiceCtrl().registerPath(
+      getDirectoryEntry().getPath(), (eventKind, context) ->
+    {
+      if (ENTRY_CREATE.equals(eventKind))
+      {
+        if (context != null)
+        {
+          final Path subPath = getDirectoryEntry().getPath().resolve(context.toString());
+          final var directoryEntry = pathToDirectoryEntry(subPath);
+          if (directoryEntry != null)
+          {
+            add(directoryEntry);
+          }
+        }
+      }
+      else if (ENTRY_DELETE.equals(eventKind))
+      {
+        if (context != null)
+        {
+          final Path subPath = getDirectoryEntry().getPath().resolve(context.toString());
+          removeItem(new DirectoryEntrySubDirectory(subPath));
+        }
+      }
+      else if (OVERFLOW.equals(eventKind))
+      {
+        // TODO
+//				updateDirectoryEntries();
+      }
+    });
+  }
+
+  synchronized private void doCollapse()
+  {
+    if (directoryEntry instanceof DirectoryEntrySubDirectory)
+    {
+      // unwatch
+    }
+    else if (directoryEntry instanceof DirectoryEntryRegularFile entry)
+    {
+      // unwatch
+      entry.clearCustomFileSystem();
+    }
+    subNodes.clear();
+    getNodeView().setExpanded(false);
   }
 
   synchronized DirectoryEntry get(int index)
@@ -181,7 +385,7 @@ public final class SubNodes
 
   synchronized boolean add(DirectoryEntry item)
   {
-    return expanded ? subNodes.add(item) : false;
+    return isExpanded() ? subNodes.add(item) : false;
   }
 
   synchronized boolean removeItem(DirectoryEntry item)
@@ -206,7 +410,7 @@ public final class SubNodes
 
   synchronized void synchronizeTo(SortedSet<DirectoryEntry> currentItems)
   {
-    if (expanded)
+    if (isExpanded())
     {
       subNodes.synchronizeTo(currentItems);
     }
@@ -223,7 +427,7 @@ public final class SubNodes
 
   synchronized void runIfExpanded(Runnable runnable)
   {
-    if (expanded)
+    if (isExpanded())
     {
       runnable.run();
     }

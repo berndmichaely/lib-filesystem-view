@@ -18,6 +18,8 @@ package de.bernd_michaely.common.filesystem.view.base.ctrl;
 import java.nio.file.Path;
 import org.checkerframework.checker.nullness.qual.*;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * DirectoryEntry implementation for subdirectories.
  *
@@ -26,16 +28,24 @@ import org.checkerframework.checker.nullness.qual.*;
 public final class DirectoryEntrySubDirectory extends DirectoryEntry
 {
   private @MonotonicNonNull NodeCtrlDirectory nodeCtrlDirectory;
+  private final Path path;
 
   DirectoryEntrySubDirectory(Path path)
   {
-    super(path);
+    this.path = requireNonNull(path, getClass().getName() + " : path is null");
+  }
+
+  @Override
+  public Path getPath()
+  {
+    return path;
   }
 
   @Override
   NodeCtrlDirectory initNodeCtrl(NodeConfig nodeConfig)
   {
-    return nodeCtrlDirectory = NodeCtrlDirectory.create(this, nodeConfig);
+    nodeCtrlDirectory = NodeCtrlDirectory.create(this, nodeConfig);
+    return nodeCtrlDirectory;
   }
 
   @Override @Nullable

@@ -37,7 +37,7 @@ public final class NodeCtrlFileSystemRootsCustom extends NodeCtrlFileSystemRoots
   private @Nullable FileSystem fileSystem;
   private @Nullable NodeCtrl skippingNodeCtrl;
 
-  private NodeCtrlFileSystemRootsCustom(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
+  private NodeCtrlFileSystemRootsCustom(DirectoryEntryRegularFile directoryEntry, NodeConfig nodeConfig)
   {
     super(directoryEntry, nodeConfig);
   }
@@ -49,7 +49,7 @@ public final class NodeCtrlFileSystemRootsCustom extends NodeCtrlFileSystemRoots
    * @param nodeConfig
    * @return a new node instance
    */
-  static NodeCtrlFileSystemRootsCustom create(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
+  static NodeCtrlFileSystemRootsCustom create(DirectoryEntryRegularFile directoryEntry, NodeConfig nodeConfig)
   {
     final var result = new NodeCtrlFileSystemRootsCustom(directoryEntry, nodeConfig);
     result.postInit();

@@ -15,8 +15,16 @@
  */
 package de.bernd_michaely.common.filesystem.view.base.ctrl;
 
+import de.bernd_michaely.common.filesystem.view.base.UserNodeConfiguration;
+import java.io.IOException;
+import java.lang.System.Logger;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import org.checkerframework.checker.nullness.qual.*;
+
+import static java.lang.System.Logger.Level.*;
+import static java.util.Objects.requireNonNull;
 
 /**
  * DirectoryEntry implementation for files.
@@ -25,22 +33,62 @@ import org.checkerframework.checker.nullness.qual.*;
  */
 public final class DirectoryEntryRegularFile extends DirectoryEntry
 {
+  private static final Logger logger = System.getLogger(DirectoryEntryRegularFile.class.getName());
+  private final Path path;
+  private final UserNodeConfiguration userNodeConfiguration;
   private @MonotonicNonNull NodeCtrlFileSystemRootsCustom nodeCtrlFileSystemRootsCustom;
+  private @Nullable FileSystem customFileSystem;
 
-  DirectoryEntryRegularFile(Path path)
+  DirectoryEntryRegularFile(Path path, UserNodeConfiguration userNodeConfiguration)
   {
-    super(path);
+    this.path = requireNonNull(path, getClass().getName() + " : path is null");
+    this.userNodeConfiguration = userNodeConfiguration;
   }
 
   @Override
   NodeCtrlFileSystemRootsCustom initNodeCtrl(NodeConfig nodeConfig)
   {
-    return nodeCtrlFileSystemRootsCustom = NodeCtrlFileSystemRootsCustom.create(this, nodeConfig);
+    nodeCtrlFileSystemRootsCustom = NodeCtrlFileSystemRootsCustom.create(this, nodeConfig);
+    return nodeCtrlFileSystemRootsCustom;
   }
 
   @Override @Nullable
   NodeCtrlFileSystemRootsCustom getNodeCtrl()
   {
     return nodeCtrlFileSystemRootsCustom;
+  }
+
+  @Override
+  public Path getPath()
+  {
+    return path;
+  }
+
+  @Nullable
+  FileSystem getCustomFileSystem()
+  {
+    if (customFileSystem == null)
+    {
+      customFileSystem = userNodeConfiguration.createFileSystemFor(getPath());
+    }
+    return customFileSystem;
+  }
+
+  void clearCustomFileSystem()
+  {
+    final FileSystem fs = customFileSystem;
+    if (fs != null && !fs.equals(FileSystems.getDefault()) && fs.isOpen())
+    {
+      userNodeConfiguration.onClosingFileSystem(fs);
+      try
+      {
+        fs.close();
+      }
+      catch (IOException ex)
+      {
+        logger.log(WARNING, ex.toString());
+      }
+    }
+    customFileSystem = null;
   }
 }

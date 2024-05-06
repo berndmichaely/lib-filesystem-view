@@ -48,7 +48,7 @@ public final class NodeCtrlFileSystemRootsGlobal extends NodeCtrlFileSystemRoots
   private static final Logger logger = System.getLogger(NodeCtrlFileSystemRootsGlobal.class.getName());
   private final @Nullable ScheduledExecutorService scheduledExecutorService;
 
-  private NodeCtrlFileSystemRootsGlobal(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
+  NodeCtrlFileSystemRootsGlobal(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
   {
     super(directoryEntry, nodeConfig);
     final var watchServiceCtrl = nodeConfig.getWatchServiceCtrl();
@@ -94,13 +94,12 @@ public final class NodeCtrlFileSystemRootsGlobal extends NodeCtrlFileSystemRoots
   public static NodeCtrlFileSystemRootsGlobal create(
     Configuration configuration, Function<PathView, NodeView> nodeViewFactory)
   {
-    final Path emptyPath = configuration.fileSystem().getPath("");
     final var watchServiceCtrl = new WatchServiceCtrl(
       configuration.requestWatchService(), configuration.fileSystem());
     final var nodeConfig = new NodeConfig(nodeViewFactory, watchServiceCtrl,
       configuration.fileNameComparator(), configuration.userNodeConfiguration());
-    final var directoryEntry = new DirectoryEntrySubDirectory(emptyPath);
-    final var nodeCtrl = new NodeCtrlFileSystemRootsGlobal(directoryEntry, nodeConfig);
+    final var directoryEntry = new DirectoryEntryFileSystem(configuration.fileSystem());
+    final var nodeCtrl = directoryEntry.initNodeCtrl(nodeConfig);
     nodeCtrl.postInit().setExpanded(true);
     watchServiceCtrl.startWatchServiceThread();
     return nodeCtrl;

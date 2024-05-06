@@ -88,7 +88,7 @@ public abstract sealed class NodeCtrl permits NodeCtrlFileSystemRoots, NodeCtrlD
       if (expanded)
       {
         logger.log(TRACE, "Expanding node »" + getDirectoryEntry() + "«");
-        getNodeView().setExpanded(true);
+//				getNodeView().setExpanded(true);
         updateDirectoryEntries();
         onExpand();
       }
@@ -96,8 +96,8 @@ public abstract sealed class NodeCtrl permits NodeCtrlFileSystemRoots, NodeCtrlD
       {
         logger.log(TRACE, "Collapsing node »" + getDirectoryEntry() + "«");
         onCollapse();
-        clearNode();
-        getNodeView().setExpanded(false);
+//				clearNode();
+//				getNodeView().setExpanded(false);
       }
     });
     if (getUserNodeConfiguration().isRequestingUpdateNotifier())
@@ -149,6 +149,7 @@ public abstract sealed class NodeCtrl permits NodeCtrlFileSystemRoots, NodeCtrlD
     return getDirectoryEntry().toString();
   }
 
+  @Deprecated
   abstract void updateDirectoryEntries();
 
   void clearNode()
@@ -252,7 +253,7 @@ public abstract sealed class NodeCtrl permits NodeCtrlFileSystemRoots, NodeCtrlD
   /**
    * Method to perform actions after a node has been expanded.
    */
-  abstract void onExpand();
+  @Deprecated abstract void onExpand();
 
   /**
    * Method to perform actions after a node has been collapsed.
