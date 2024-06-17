@@ -2,7 +2,7 @@ plugins {
 	id 'java-library'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.37' apply false
+	id 'org.checkerframework' version '0.6.40' apply false
 }
 
 apply plugin: 'org.checkerframework'
@@ -15,7 +15,7 @@ group = 'de.bernd_michaely'
 version = '0.9'
 
 ext.versionJUnit = '5.9.2'
-ext.versionCheckerFramework = '3.42.0'
+ext.versionCheckerFramework = '3.44.0'
 
 jacoco {
 	toolVersion = '0.8.10'

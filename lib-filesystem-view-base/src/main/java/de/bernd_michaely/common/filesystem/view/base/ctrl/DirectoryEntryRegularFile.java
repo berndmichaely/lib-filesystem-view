@@ -33,62 +33,62 @@ import static java.util.Objects.requireNonNull;
  */
 public final class DirectoryEntryRegularFile extends DirectoryEntry
 {
-  private static final Logger logger = System.getLogger(DirectoryEntryRegularFile.class.getName());
-  private final Path path;
-  private final UserNodeConfiguration userNodeConfiguration;
-  private @MonotonicNonNull NodeCtrlFileSystemRootsCustom nodeCtrlFileSystemRootsCustom;
-  private @Nullable FileSystem customFileSystem;
+	private static final Logger logger = System.getLogger(DirectoryEntryRegularFile.class.getName());
+	private final Path path;
+	private final UserNodeConfiguration userNodeConfiguration;
+	private @MonotonicNonNull NodeCtrl nodeCtrlFileSystemRootsCustom;
+	private @Nullable FileSystem customFileSystem;
 
-  DirectoryEntryRegularFile(Path path, UserNodeConfiguration userNodeConfiguration)
-  {
-    this.path = requireNonNull(path, getClass().getName() + " : path is null");
-    this.userNodeConfiguration = userNodeConfiguration;
-  }
+	DirectoryEntryRegularFile(Path path, UserNodeConfiguration userNodeConfiguration)
+	{
+		this.path = requireNonNull(path, getClass().getName() + " : path is null");
+		this.userNodeConfiguration = userNodeConfiguration;
+	}
 
-  @Override
-  NodeCtrlFileSystemRootsCustom initNodeCtrl(NodeConfig nodeConfig)
-  {
-    nodeCtrlFileSystemRootsCustom = NodeCtrlFileSystemRootsCustom.create(this, nodeConfig);
-    return nodeCtrlFileSystemRootsCustom;
-  }
+	@Override
+	NodeCtrl initNodeCtrl(NodeConfig nodeConfig)
+	{
+		nodeCtrlFileSystemRootsCustom = new NodeCtrl(this, nodeConfig);
+		return nodeCtrlFileSystemRootsCustom;
+	}
 
-  @Override @Nullable
-  NodeCtrlFileSystemRootsCustom getNodeCtrl()
-  {
-    return nodeCtrlFileSystemRootsCustom;
-  }
+	@Override @Nullable
+	NodeCtrl getNodeCtrl()
+	{
+		return nodeCtrlFileSystemRootsCustom;
+	}
 
-  @Override
-  public Path getPath()
-  {
-    return path;
-  }
+	@Override
+	public Path getPath()
+	{
+		return path;
+	}
 
-  @Nullable
-  FileSystem getCustomFileSystem()
-  {
-    if (customFileSystem == null)
-    {
-      customFileSystem = userNodeConfiguration.createFileSystemFor(getPath());
-    }
-    return customFileSystem;
-  }
+	@Nullable
+	FileSystem getCustomFileSystem()
+	{
+		if (customFileSystem == null)
+		{
+			customFileSystem = userNodeConfiguration.createFileSystemFor(getPath());
+		}
+		return customFileSystem;
+	}
 
-  void clearCustomFileSystem()
-  {
-    final FileSystem fs = customFileSystem;
-    if (fs != null && !fs.equals(FileSystems.getDefault()) && fs.isOpen())
-    {
-      userNodeConfiguration.onClosingFileSystem(fs);
-      try
-      {
-        fs.close();
-      }
-      catch (IOException ex)
-      {
-        logger.log(WARNING, ex.toString());
-      }
-    }
-    customFileSystem = null;
-  }
+	void clearCustomFileSystem()
+	{
+		final FileSystem fs = customFileSystem;
+		if (fs != null && !fs.equals(FileSystems.getDefault()) && fs.isOpen())
+		{
+			userNodeConfiguration.onClosingFileSystem(fs);
+			try
+			{
+				fs.close();
+			}
+			catch (IOException ex)
+			{
+				logger.log(WARNING, ex.toString());
+			}
+		}
+		customFileSystem = null;
+	}
 }

@@ -3,7 +3,7 @@ plugins {
 	id 'org.openjfx.javafxplugin' version '0.1.0'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.37' apply false
+	id 'org.checkerframework' version '0.6.40' apply false
 }
 
 apply plugin: 'org.checkerframework'
@@ -16,7 +16,7 @@ group = 'de.bernd_michaely'
 version = '0.9'
 
 ext.versionJUnit = '5.9.2'
-ext.versionCheckerFramework = '3.42.0'
+ext.versionCheckerFramework = '3.44.0'
 
 jacoco {
 	toolVersion = '0.8.10'
@@ -31,10 +31,7 @@ java {
 }
 
 javafx {
-	// LTS 17 version (2022-07 → 2026-09)
-	//version = "17.0.6"
-	// latest version
-	version = "21.0.2"
+	version = "21.0.3"
 	modules = [ 'javafx.controls' ]
 	configurations = [ 'implementation', 'testImplementation']
 }
@@ -121,7 +118,7 @@ javadoc {
 	def headerPostfix = '</strong></div>'
 	def header = headerPrefix + project.name + " (" + project.version + ')' + headerPostfix
 	def _versionJavaFxMain = (javafx.version =~ /^\d+/)[0]
-	def _versionJavaFxLTSMain = 17
+	def _versionJavaFxLTSMain = 21
 	def versionJavaFx = _versionJavaFxLTSMain
 	options.header header
 	options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility.getMajorVersion()}/docs/api"

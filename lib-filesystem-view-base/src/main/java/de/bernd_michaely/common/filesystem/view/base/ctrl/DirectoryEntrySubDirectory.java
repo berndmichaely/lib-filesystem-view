@@ -27,30 +27,30 @@ import static java.util.Objects.requireNonNull;
  */
 public final class DirectoryEntrySubDirectory extends DirectoryEntry
 {
-  private @MonotonicNonNull NodeCtrlDirectory nodeCtrlDirectory;
-  private final Path path;
+	private @MonotonicNonNull NodeCtrl nodeCtrlDirectory;
+	private final Path path;
 
-  DirectoryEntrySubDirectory(Path path)
-  {
-    this.path = requireNonNull(path, getClass().getName() + " : path is null");
-  }
+	DirectoryEntrySubDirectory(Path path)
+	{
+		this.path = requireNonNull(path, getClass().getName() + " : path is null");
+	}
 
-  @Override
-  public Path getPath()
-  {
-    return path;
-  }
+	@Override
+	public Path getPath()
+	{
+		return path;
+	}
 
-  @Override
-  NodeCtrlDirectory initNodeCtrl(NodeConfig nodeConfig)
-  {
-    nodeCtrlDirectory = NodeCtrlDirectory.create(this, nodeConfig);
-    return nodeCtrlDirectory;
-  }
+	@Override
+	NodeCtrl initNodeCtrl(NodeConfig nodeConfig)
+	{
+		nodeCtrlDirectory = new NodeCtrl(this, nodeConfig);
+		return nodeCtrlDirectory;
+	}
 
-  @Override @Nullable
-  NodeCtrlDirectory getNodeCtrl()
-  {
-    return nodeCtrlDirectory;
-  }
+	@Override @Nullable
+	NodeCtrl getNodeCtrl()
+	{
+		return nodeCtrlDirectory;
+	}
 }

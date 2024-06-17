@@ -6,7 +6,10 @@ package de.bernd_michaely.common.filesystem.view.fx;
 import de.bernd_michaely.common.filesystem.view.base.Configuration;
 import de.bernd_michaely.common.filesystem.view.base.UserNodeConfiguration;
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -22,6 +25,7 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
+import static java.lang.System.Logger.Level.*;
 import static java.util.concurrent.TimeUnit.*;
 
 /**
@@ -31,6 +35,7 @@ import static java.util.concurrent.TimeUnit.*;
  */
 public class TestApplication extends Application
 {
+	private static final Logger logger = System.getLogger(TestApplication.class.getName());
 	private static final String PARAMETER_NAME_SHOW_WINDOW = "demo-mode";
 	private static final CountDownLatch countDownLatchLaunch = new CountDownLatch(1);
 	private static CountDownLatch countDownLatchShutdown;
@@ -49,6 +54,26 @@ public class TestApplication extends Application
 		}
 
 		@Override
+		public boolean isCreatingNodeForFile(Path file)
+		{
+			return file.getFileName().toString().toLowerCase().endsWith(".zip");
+		}
+
+		@Override
+		public FileSystem createFileSystemFor(Path file)
+		{
+			try
+			{
+				return FileSystems.newFileSystem(file);
+			}
+			catch (IOException ex)
+			{
+				logger.log(WARNING, ex.toString());
+				return null;
+			}
+		}
+
+		@Override
 		public UserNodeConfiguration getUserNodeConfigurationFor(Path path)
 		{
 			return new TestUserNodeConfiguration();
@@ -57,7 +82,7 @@ public class TestApplication extends Application
 		@Override
 		public boolean isLeafNode(Path fileName)
 		{
-			return fileName != null ? fileName.toString().equalsIgnoreCase("DCIM") : false;
+			return fileName.toString().equalsIgnoreCase("DCIM");
 		}
 	}
 

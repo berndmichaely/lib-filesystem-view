@@ -32,125 +32,125 @@ import java.util.List;
 class NodeViewImpl implements NodeView, UnitTestCallback
 {
 //	private final boolean beVerbose = true;
-  private final boolean beVerbose = false;
-  private final List<NodeView> nodeViews;
-  private final List<NodeView> subNodes;
-  private final PathView pathView;
-  private boolean leafNode, expanded;
-  private UnitTestCallback unitTestCallback;
+	private final boolean beVerbose = false;
+	private final List<NodeView> nodeViews;
+	private final List<NodeView> subNodes;
+	private final PathView pathView;
+	private boolean leafNode, expanded;
+	private UnitTestCallback unitTestCallback;
 
-  NodeViewImpl(PathView pathView)
-  {
-    this.nodeViews = new ArrayList<>();
-    this.subNodes = Collections.unmodifiableList(nodeViews);
-    this.pathView = pathView;
-  }
+	NodeViewImpl(PathView pathView)
+	{
+		this.nodeViews = new ArrayList<>();
+		this.subNodes = Collections.unmodifiableList(nodeViews);
+		this.pathView = pathView;
+	}
 
-  @Override
-  public void insertSubNodeAt(int index, NodeView subNodeView)
-  {
-    if (beVerbose)
-    {
-      System.out.println("NodeView Test Impl : insertSubNode »" + subNodeView + "« @ " + index + " for »" +
-        getPathView().getPath() + "«");
-      System.out.println("                     -> subnodes: " + getSubNodes());
-    }
-    nodeViews.add(index, subNodeView);
-    if (beVerbose)
-    {
-      System.out.println("                     => subnodes: " + getSubNodes());
-    }
-  }
+	@Override
+	public void insertSubNodeAt(int index, NodeView subNodeView)
+	{
+		if (beVerbose)
+		{
+			System.out.println("NodeView Test Impl : insertSubNode »" + subNodeView + "« @ " + index + " for »" +
+				getPathView().getPath() + "«");
+			System.out.println("                     -> subnodes: " + getSubNodes());
+		}
+		nodeViews.add(index, subNodeView);
+		if (beVerbose)
+		{
+			System.out.println("                     => subnodes: " + getSubNodes());
+		}
+	}
 
-  @Override
-  public void addAllSubNodes(Collection<NodeView> subNodeViews)
-  {
-    nodeViews.addAll(subNodeViews);
-  }
+	@Override
+	public void addAllSubNodes(Collection<NodeView> subNodeViews)
+	{
+		nodeViews.addAll(subNodeViews);
+	}
 
-  @Override
-  public void removeSubNodeAt(int index)
-  {
-    if (beVerbose)
-    {
-      System.out.println("NodeView Test Impl : removeSubNodeAt " + index + " for »" +
-        getPathView().getPath() + "«");
-      System.out.println("                     -> subnodes: " + getSubNodes());
-    }
-    nodeViews.remove(index);
-    if (beVerbose)
-    {
-      System.out.println("                     => subnodes: " + getSubNodes());
-    }
-  }
+	@Override
+	public void removeSubNodeAt(int index)
+	{
+		if (beVerbose)
+		{
+			System.out.println("NodeView Test Impl : removeSubNodeAt " + index + " for »" +
+				getPathView().getPath() + "«");
+			System.out.println("                     -> subnodes: " + getSubNodes());
+		}
+		nodeViews.remove(index);
+		if (beVerbose)
+		{
+			System.out.println("                     => subnodes: " + getSubNodes());
+		}
+	}
 
-  @Override
-  public void clear()
-  {
-    nodeViews.clear();
-  }
+	@Override
+	public void clear()
+	{
+		nodeViews.clear();
+	}
 
-  boolean isLeafNode()
-  {
-    return leafNode;
-  }
+	boolean isLeafNode()
+	{
+		return leafNode;
+	}
 
-  @Override
-  public void setLeafNode(boolean leafNode)
-  {
-    this.leafNode = leafNode;
-  }
+	@Override
+	public void setLeafNode(boolean leafNode)
+	{
+		this.leafNode = leafNode;
+	}
 
-  @Override
-  public void setExpanded(boolean expanded)
-  {
-    if (this.expanded != expanded)
-    {
-      this.expanded = expanded;
-      pathView.handleNodeExpansion(expanded);
-    }
-  }
+	@Override
+	public void setExpanded(boolean expanded)
+	{
+		if (this.expanded != expanded)
+		{
+			this.expanded = expanded;
+			pathView.handleNodeExpansion(expanded);
+		}
+	}
 
-  //
-  // Unit-Test specific methods:
-  //
-  void setUnitTestCallback(UnitTestCallback unitTestCallback)
-  {
-    this.unitTestCallback = unitTestCallback;
-  }
+	//
+	// Unit-Test specific methods:
+	//
+	void setUnitTestCallback(UnitTestCallback unitTestCallback)
+	{
+		this.unitTestCallback = unitTestCallback;
+	}
 
-  @Override
-  public void call(boolean added, DirectoryEntry subDirectoryEntry, int index)
-  {
-    if (unitTestCallback != null)
-    {
-      unitTestCallback.call(added, subDirectoryEntry, index);
-    }
-  }
+	@Override
+	public void call(boolean added, DirectoryEntry subDirectoryEntry, int index)
+	{
+		if (unitTestCallback != null)
+		{
+			unitTestCallback.call(added, subDirectoryEntry, index);
+		}
+	}
 
-  List<NodeView> getSubNodes()
-  {
-    return subNodes;
-  }
+	List<NodeView> getSubNodes()
+	{
+		return subNodes;
+	}
 
-  DirectoryEntry getPathView()
-  {
-    return (DirectoryEntry) pathView;
-  }
+	DirectoryEntry getPathView()
+	{
+		return (DirectoryEntry) pathView;
+	}
 
-  UserNodeConfiguration getUserNodeConfiguration()
-  {
-    return getPathView().getNodeCtrl().getUserNodeConfiguration();
-  }
+	UserNodeConfiguration getUserNodeConfiguration()
+	{
+		return getPathView().getNodeCtrl().getSubNodes().getUserNodeConfiguration();
+	}
 
-  WatchServiceCtrl getWatchServiceCtrl()
-  {
-    return getPathView().getNodeCtrl().getNodeConfig().getWatchServiceCtrl();
-  }
+	WatchServiceCtrl getWatchServiceCtrl()
+	{
+		return getPathView().getNodeCtrl().getSubNodes().getNodeConfig().getWatchServiceCtrl();
+	}
 
-  @Override
-  public String toString()
-  {
-    return pathView.toString();
-  }
+	@Override
+	public String toString()
+	{
+		return pathView.toString();
+	}
 }

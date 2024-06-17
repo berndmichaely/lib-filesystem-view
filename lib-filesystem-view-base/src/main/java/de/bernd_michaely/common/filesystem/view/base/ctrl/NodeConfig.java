@@ -32,54 +32,54 @@ import static java.util.Objects.requireNonNull;
  */
 public class NodeConfig
 {
-  private final Function<PathView, NodeView> nodeViewFactory;
-  private final WatchServiceCtrl watchServiceCtrl;
-  private final Supplier<Comparator<String>> fileNameComparatorSupplier;
-  private final Supplier<Comparator<DirectoryEntry>> directoryEntryComparatorSupplier;
-  private final UserNodeConfiguration userNodeConfiguration;
+	private final Function<PathView, NodeView> nodeViewFactory;
+	private final WatchServiceCtrl watchServiceCtrl;
+	private final Supplier<Comparator<String>> fileNameComparatorSupplier;
+	private final Supplier<Comparator<DirectoryEntry>> directoryEntryComparatorSupplier;
+	private final UserNodeConfiguration userNodeConfiguration;
 
-  NodeConfig(Function<PathView, NodeView> nodeViewFactory, WatchServiceCtrl watchServiceCtrl,
-    Comparator<String> fileNameComparator, UserNodeConfiguration userNodeConfiguration)
-  {
-    this.nodeViewFactory = requireNonNull(nodeViewFactory,
-      getClass().getName() + " : nodeViewFactory is null");
-    this.watchServiceCtrl = requireNonNull(watchServiceCtrl,
-      getClass().getName() + " : watchServiceConfig is null");
-    this.fileNameComparatorSupplier = () -> fileNameComparator;
-    this.directoryEntryComparatorSupplier = () ->
-      (entry1, entry2) -> fileNameComparatorSupplier.get().compare(entry1.getName(), entry2.getName());
-    this.userNodeConfiguration = userNodeConfiguration;
-  }
+	NodeConfig(Function<PathView, NodeView> nodeViewFactory, WatchServiceCtrl watchServiceCtrl,
+		Comparator<String> fileNameComparator, UserNodeConfiguration userNodeConfiguration)
+	{
+		this.nodeViewFactory = requireNonNull(nodeViewFactory,
+			getClass().getName() + " : nodeViewFactory is null");
+		this.watchServiceCtrl = requireNonNull(watchServiceCtrl,
+			getClass().getName() + " : watchServiceConfig is null");
+		this.fileNameComparatorSupplier = () -> fileNameComparator;
+		this.directoryEntryComparatorSupplier = () ->
+			(entry1, entry2) -> fileNameComparatorSupplier.get().compare(entry1.getName(), entry2.getName());
+		this.userNodeConfiguration = userNodeConfiguration;
+	}
 
-  Function<PathView, NodeView> getNodeViewFactory()
-  {
-    return nodeViewFactory;
-  }
+	Function<PathView, NodeView> getNodeViewFactory()
+	{
+		return nodeViewFactory;
+	}
 
-  WatchServiceCtrl getWatchServiceCtrl()
-  {
-    return watchServiceCtrl;
-  }
+	WatchServiceCtrl getWatchServiceCtrl()
+	{
+		return watchServiceCtrl;
+	}
 
-  Supplier<Comparator<String>> getFileNameComparatorSupplier()
-  {
-    return fileNameComparatorSupplier;
-  }
+	Supplier<Comparator<String>> getFileNameComparatorSupplier()
+	{
+		return fileNameComparatorSupplier;
+	}
 
-  Supplier<Comparator<DirectoryEntry>> getDirectoryEntryComparatorSupplier()
-  {
-    return directoryEntryComparatorSupplier;
-  }
+	Supplier<Comparator<DirectoryEntry>> getDirectoryEntryComparatorSupplier()
+	{
+		return directoryEntryComparatorSupplier;
+	}
 
-  /**
-   * Returns the global prototype UserNodeConfiguration.
-   *
-   * @param path the path to create a new UserNodeConfiguration for
-   * @return a new UserNodeConfiguration for the given path (might or might not
-   *         be a singleton)
-   */
-  UserNodeConfiguration getUserNodeConfiguration(Path path)
-  {
-    return userNodeConfiguration.getUserNodeConfigurationFor(path);
-  }
+	/**
+	 * Returns a new UserNodeConfiguration for the given path.
+	 *
+	 * @param path the path to create a new UserNodeConfiguration for
+	 * @return a new UserNodeConfiguration for the given path (might or might not
+	 *         be a singleton)
+	 */
+	UserNodeConfiguration getUserNodeConfiguration(Path path)
+	{
+		return userNodeConfiguration.getUserNodeConfigurationFor(path);
+	}
 }

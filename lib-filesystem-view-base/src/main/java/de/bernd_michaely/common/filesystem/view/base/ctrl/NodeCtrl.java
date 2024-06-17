@@ -23,7 +23,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import org.checkerframework.checker.nullness.qual.*;
 
-import static java.lang.System.Logger.Level.*;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -31,232 +30,157 @@ import static java.util.Objects.requireNonNull;
  *
  * @author Bernd Michaely (info@bernd-michaely.de)
  */
-public abstract sealed class NodeCtrl permits NodeCtrlFileSystemRoots, NodeCtrlDirectory
+public sealed class NodeCtrl permits NodeCtrlFileSystemRootsGlobal
 {
-  private static final Logger logger = System.getLogger(NodeCtrl.class.getName());
-  private final SubNodes subNodes;
+	private static final Logger logger = System.getLogger(NodeCtrl.class.getName());
+	private final SubNodes subNodes;
 
-  /**
-   * Creates a new instance.
-   *
-   * @param directoryEntry
-   * @param nodeConfig
-   * @param parentState
-   * @see #postInit()
-   */
-  NodeCtrl(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
-  {
-    this.subNodes = new SubNodes(
-      requireNonNull(directoryEntry, getClass().getName() + ": DirectoryEntry must not be null"),
-      requireNonNull(nodeConfig, getClass().getName() + ": NodeCtrl must not be null"));
-  }
+	/**
+	 * Creates a new instance.
+	 *
+	 * @param directoryEntry
+	 * @param nodeConfig
+	 * @param parentState
+	 * @see #postInit()
+	 */
+	NodeCtrl(DirectoryEntry directoryEntry, NodeConfig nodeConfig)
+	{
+		this.subNodes = new SubNodes(
+			requireNonNull(directoryEntry, getClass().getName() + ": DirectoryEntry must not be null"),
+			requireNonNull(nodeConfig, getClass().getName() + ": NodeCtrl must not be null"));
+		if (this.subNodes.getUserNodeConfiguration().isRequestingUpdateNotifier())
+		{
+			this.subNodes.getUserNodeConfiguration().setUpdateNotifier(this.subNodes::updateDirectoryEntries);
+		}
+	}
 
-  SubNodes getSubNodes()
-  {
-    return subNodes;
-  }
+	SubNodes getSubNodes()
+	{
+		return subNodes;
+	}
 
-  DirectoryEntry getDirectoryEntry()
-  {
-    return getSubNodes().getDirectoryEntry();
-  }
+	DirectoryEntry getDirectoryEntry()
+	{
+		return getSubNodes().getDirectoryEntry();
+	}
 
-  NodeConfig getNodeConfig()
-  {
-    return getSubNodes().getNodeConfig();
-  }
+	UserNodeConfiguration getUserNodeConfiguration()
+	{
+		return getSubNodes().getUserNodeConfiguration();
+	}
 
-  UserNodeConfiguration getUserNodeConfiguration()
-  {
-    return getSubNodes().getUserNodeConfiguration();
-  }
+	/**
+	 * Returns the corresponding node view.
+	 *
+	 * @return the corresponding node view
+	 */
+	public NodeView getNodeView()
+	{
+		return getSubNodes().getNodeView();
+	}
 
-  /**
-   * Returns the corresponding node view.
-   *
-   * @return the corresponding node view
-   */
-  public NodeView getNodeView()
-  {
-    return getSubNodes().getNodeView();
-  }
+	@Nullable
+	DirectoryEntry findNodeByName(Path name)
+	{
+		return getSubNodes().findNodeByName(name);
+	}
 
-  NodeCtrl postInit()
-  {
-    getSubNodes().setExpansionHandler(expanded ->
-    {
-      if (expanded)
-      {
-        logger.log(TRACE, "Expanding node »" + getDirectoryEntry() + "«");
-//				getNodeView().setExpanded(true);
-        updateDirectoryEntries();
-        onExpand();
-      }
-      else
-      {
-        logger.log(TRACE, "Collapsing node »" + getDirectoryEntry() + "«");
-        onCollapse();
-//				clearNode();
-//				getNodeView().setExpanded(false);
-      }
-    });
-    if (getUserNodeConfiguration().isRequestingUpdateNotifier())
-    {
-      getUserNodeConfiguration().setUpdateNotifier(this::updateDirectory);
-    }
-    return this;
-  }
+	/**
+	 * Returns true, if this node is expanded, false, if it is collapsed.
+	 *
+	 * @return true, if this node is expanded, false, if it is collapsed
+	 */
+	boolean isExpanded()
+	{
+		return getSubNodes().isExpanded();
+	}
 
-  @Nullable
-  DirectoryEntry findNodeByName(Path name)
-  {
-    return getSubNodes().findNodeByName(name);
-  }
+	boolean isLeafNode()
+	{
+		return getUserNodeConfiguration().isLeafNode(getDirectoryEntry().getPath());
+	}
 
-  /**
-   * Returns true, if this node is expanded, false, if it is collapsed.
-   *
-   * @return true, if this node is expanded, false, if it is collapsed
-   */
-  boolean isExpanded()
-  {
-    return getSubNodes().isExpanded();
-  }
+	/**
+	 * Expand or collapse this node.
+	 *
+	 * @param expanded true to expand, false to collapse this node
+	 */
+	public void setExpanded(boolean expanded)
+	{
+		getSubNodes().setExpanded(expanded);
+	}
 
-  boolean isLeafNode()
-  {
-    return getUserNodeConfiguration().isLeafNode(getDirectoryEntry().getPath());
-  }
+	@Override
+	public String toString()
+	{
+		return getSubNodes().getDirectoryEntry().toString();
+	}
 
-  /**
-   * Expand or collapse this node.
-   *
-   * @param expanded true to expand, false to collapse this node
-   */
-  public void setExpanded(boolean expanded)
-  {
-    getSubNodes().setExpanded(expanded && !isLeafNode());
-  }
+	final void updateDirectoryEntries()
+	{
+		getSubNodes().updateDirectoryEntries();
+	}
 
-  final void synchronizeSubNodes(SortedSet<DirectoryEntry> currentItems)
-  {
-    getSubNodes().synchronizeTo(currentItems);
-  }
+	void updateTree()
+	{
+		getSubNodes().updateTree();
+	}
 
-  @Override
-  public String toString()
-  {
-    return getDirectoryEntry().toString();
-  }
+	@Nullable
+	NodeView expandPath(Path absolutePath, int index, boolean expandLastElement)
+	{
+		final int nameCount = absolutePath.getNameCount();
+		if (index < nameCount)
+		{
+			final int nextIndex = index + 1;
+			final boolean isLastElement = nextIndex == nameCount;
+			setExpanded(true);
+			final Path name = absolutePath.getName(index);
+			final DirectoryEntry entry = findNodeByName(name);
+			if (entry != null)
+			{
+				final var nodeCtrl = entry.getNodeCtrl();
+				if (nodeCtrl != null)
+				{
+					final NodeView subNodeView = nodeCtrl.expandPath(absolutePath, nextIndex, expandLastElement);
+					final NodeView result = subNodeView != null ? subNodeView : nodeCtrl.getNodeView();
+					if (isLastElement && expandLastElement)
+					{
+						nodeCtrl.setExpanded(true);
+					}
+					return result;
+				}
+			}
+		}
+		return null;
+	}
 
-  @Deprecated
-  abstract void updateDirectoryEntries();
-
-  void clearNode()
-  {
-    getSubNodes().clear();
-  }
-
-  private void updateDirectory()
-  {
-    logger.log(TRACE, () -> "Updating directory »" + getDirectoryEntry().getPath() + "«");
-    getSubNodes().runIfExpanded(() ->
-    {
-      if (isLeafNode())
-      {
-        clearNode();
-      }
-      else
-      {
-        updateDirectoryEntries();
-      }
-    });
-  }
-
-  @Nullable
-  NodeView expandPath(Path absolutePath, int index, boolean expandLastElement)
-  {
-    final int nameCount = absolutePath.getNameCount();
-    if (index < nameCount)
-    {
-      final int nextIndex = index + 1;
-      final boolean isLastElement = nextIndex == nameCount;
-      setExpanded(true);
-      final Path name = absolutePath.getName(index);
-      final DirectoryEntry entry = findNodeByName(name);
-      if (entry != null)
-      {
-        final var nodeCtrl = entry.getNodeCtrl();
-        if (nodeCtrl != null)
-        {
-          final NodeView subNodeView = nodeCtrl.expandPath(absolutePath, nextIndex, expandLastElement);
-          final NodeView result = subNodeView != null ? subNodeView : nodeCtrl.getNodeView();
-          if (isLastElement && expandLastElement)
-          {
-            nodeCtrl.setExpanded(true);
-          }
-          return result;
-        }
-      }
-    }
-    return null;
-  }
-
-  void updateTree()
-  {
-    if (isExpanded())
-    {
-      updateDirectory();
-      getSubNodes().forEach(entry ->
-      {
-        if (entry instanceof DirectoryEntrySubDirectory)
-        {
-          final var nodeCtrl = entry.getNodeCtrl();
-          if (nodeCtrl != null)
-          {
-            nodeCtrl.updateTree();
-          }
-        }
-      });
-    }
-  }
-
-  /**
-   * Returns the currently expanded paths of the sub tree of this node.
-   *
-   * @return the currently expanded paths
-   */
-  public SortedSet<Path> getExpandedPaths()
-  {
-    final var set = new TreeSet<Path>();
-    if (getSubNodes().isEmpty())
-    {
-      set.add(getDirectoryEntry().getPath());
-    }
-    else
-    {
-      getSubNodes().forEach(entry ->
-      {
-        if (entry instanceof DirectoryEntrySubDirectory entrySubDir)
-        {
-          final NodeCtrlDirectory nodeCtrl = entrySubDir.getNodeCtrl();
-          if (nodeCtrl != null)
-          {
-            set.addAll(nodeCtrl.getExpandedPaths());
-          }
-        }
-      });
-    }
-    return set;
-  }
-
-  /**
-   * Method to perform actions after a node has been expanded.
-   */
-  @Deprecated abstract void onExpand();
-
-  /**
-   * Method to perform actions after a node has been collapsed.
-   */
-  abstract void onCollapse();
+	/**
+	 * Returns the currently expanded paths of the sub tree of this node.
+	 *
+	 * @return the currently expanded paths
+	 */
+	public SortedSet<Path> getExpandedPaths()
+	{
+		final var set = new TreeSet<Path>();
+		if (getSubNodes().isEmpty())
+		{
+			set.add(getSubNodes().getDirectoryEntry().getPath());
+		}
+		else
+		{
+			getSubNodes().forEach(entry ->
+			{
+				if (entry instanceof DirectoryEntrySubDirectory entrySubDir)
+				{
+					final NodeCtrl nodeCtrl = entrySubDir.getNodeCtrl();
+					if (nodeCtrl != null)
+					{
+						set.addAll(nodeCtrl.getExpandedPaths());
+					}
+				}
+			});
+		}
+		return set;
+	}
 }
