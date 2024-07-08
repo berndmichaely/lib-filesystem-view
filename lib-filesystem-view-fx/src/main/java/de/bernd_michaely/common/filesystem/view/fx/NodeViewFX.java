@@ -5,6 +5,8 @@ import de.bernd_michaely.common.filesystem.view.base.NodeView;
 import de.bernd_michaely.common.filesystem.view.base.PathView;
 import java.lang.System.Logger;
 import java.util.Collection;
+import java.util.List;
+import java.util.SortedMap;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
@@ -62,19 +64,23 @@ class NodeViewFX implements NodeView
 	}
 
 	@Override
-	public void insertSubNodeAt(int index, NodeView subNodeView)
+	public void insertSubNodes(SortedMap<Integer, NodeView> mapSubNodeViews)
 	{
 		Platform.runLater(() ->
 		{
-			if (subNodeView instanceof NodeViewFX subNodeViewFX)
+			final ObservableList<TreeItem<PathView>> children = treeItem.getChildren();
+			mapSubNodeViews.forEach((index, subNodeView) ->
 			{
-				treeItem.getChildren().add(index, subNodeViewFX.treeItem);
-			}
-			else
-			{
-				logger.log(WARNING, getClass().getName() +
-					"::insertSubNodeAt : Invalid NodeView : " + subNodeView);
-			}
+				if (subNodeView instanceof NodeViewFX subNodeViewFX)
+				{
+					children.add(index, subNodeViewFX.treeItem);
+				}
+				else
+				{
+					logger.log(WARNING, getClass().getName() +
+						"::insertSubNodeAt : Invalid NodeView : " + subNodeView);
+				}
+			});
 		});
 	}
 
@@ -91,15 +97,18 @@ class NodeViewFX implements NodeView
 	}
 
 	@Override
-	public void removeSubNodeAt(int index)
+	public void removeSubNodes(List<Integer> indices)
 	{
 		Platform.runLater(() ->
 		{
 			final ObservableList<TreeItem<PathView>> children = treeItem.getChildren();
-			if (index >= 0 && index < children.size())
+			indices.forEach(index ->
 			{
-				children.remove(index);
-			}
+				if (index >= 0 && index < children.size())
+				{
+					children.remove((int) index);
+				}
+			});
 		});
 	}
 

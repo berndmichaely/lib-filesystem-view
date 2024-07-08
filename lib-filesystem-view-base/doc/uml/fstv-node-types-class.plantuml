@@ -12,23 +12,23 @@ skinparam packageStyle Frame
 
 title FileSystemTreeView node types
 
-package base #Ivory {
+package java.io {
 
-	together {
-		abstract class PathView
-		interface RootNodeCtrl
-	}
-
-	interface Closeable as "java.io.Closeable" {
+	interface Closeable {
 		void close() throws IOException
 	}
+}
 
-	abstract class PathView {
+package base #Ivory {
+
+	interface RootNodeCtrl
+
+	interface PathView {
 		+ Path getPath()
 		+ String getName()
 	}
 
-	interface RootNodeCtrl extends Closeable {
+	interface RootNodeCtrl extends java.io.Closeable {
 		NodeView getNodeView()
 		PathSelection getPathSelection()
 		void setExpanded(boolean expanded)
@@ -41,24 +41,14 @@ package base #Ivory {
 
 package base.ctrl {
 
-	together {
-		abstract class NodeCtrl
-		abstract class NodeCtrlFileSystemRoots
-		class NodeCtrlDirectory
-		class NodeCtrlFileSystemRootsGlobal
-		class NodeCtrlFileSystemRootsCustom
-	}
-
-	together {
-		abstract class DirectoryEntry
-		class DirectoryEntrySubDirectory
-		class DirectoryEntryRegularFile
-	}
-
-	abstract class DirectoryEntry extends base.PathView {
+	abstract class DirectoryEntry implements base.PathView {
 
 		{abstract} ~ NodeCtrl getNodeCtrl()
 		+ void handleNodeExpansion(boolean expand)
+	}
+
+	class DirectoryEntryFileSystem extends DirectoryEntry {
+		NodeCtrlDirectory getNodeCtrl()
 	}
 
 	class DirectoryEntrySubDirectory extends DirectoryEntry {
@@ -68,9 +58,6 @@ package base.ctrl {
 	class DirectoryEntryRegularFile extends DirectoryEntry {
 		NodeCtrlFileSystemRootsCustom getNodeCtrl()
 	}
-
-	DirectoryEntrySubDirectory --> NodeCtrlDirectory
-	DirectoryEntryRegularFile --> NodeCtrlFileSystemRootsCustom
 
 	abstract class NodeCtrl {
 		+NodeView getNodeView()
@@ -82,25 +69,13 @@ package base.ctrl {
 	}
 
 	NodeCtrl --> DirectoryEntry
+	NodeCtrl --> SubNodes
 
-	abstract class NodeCtrlFileSystemRoots extends NodeCtrl {
-		~ FileSystem getFileSystem()
-	}
-
-	class NodeCtrlDirectory {
+	class NodeCtrlFileSystemRootsGlobal extends NodeCtrl implements base.RootNodeCtrl {
 		~ void updateDirectoryEntries()
 	}
 
-	NodeCtrlDirectory --|> NodeCtrl
-
-	class NodeCtrlFileSystemRootsGlobal extends NodeCtrlFileSystemRoots implements base.RootNodeCtrl {
-		~ void updateDirectoryEntries()
-	}
-
-	class NodeCtrlFileSystemRootsCustom extends NodeCtrlFileSystemRoots {
-		- boolean isSkippingSingleRoot()
-		~ void updateDirectoryEntries()
-	}
+	class WatchServiceCtrl implements java.io.Closeable
 }
 
 @enduml

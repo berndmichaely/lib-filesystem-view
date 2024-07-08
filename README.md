@@ -21,7 +21,7 @@ The library provides the basic functionality one would expect from such a librar
 
 The latter point allows e.g. to:
 
-* mount a virtual inline view of an **embedded filesystem**, e.g. the contents of an archive file (see the `test.zip` file in the screenshot)
+* mount a virtual inline view of an **embedded filesystem**, e.g. the contents of an archive file (see the `test1.zip` and `test2.zip` files in the screenshot)
 * treat some particular directories conceptually as **leaf nodes**, that is it is not possible to descend into such directories. An application might want to hide the physical subdirectory structure of directories like `DCIM`, `.svn`, `.git` and the like and provide its own logical view instead
 * control the display of hidden directories.
 
@@ -47,10 +47,12 @@ Basically, use the factory methods of the main interfaces to create a new instan
 
 The `createInstance()` methods optionally take a `Configuration` argument, which can be configured via the `builder()`. Most enhanced configuration options then can be provided by passing an implementation of the `UserNodeConfiguration` interface.
 
-The detailed usage is described in a separate document [USAGE.md](USAGE.md).
+The detailed usage is described in a separate document [USAGE.md](USAGE.md) and the [GitHub Wiki](https://github.com/berndmichaely/lib-filesystem-view/wiki).
 
 ## Current Status
 
 Early access.
 
-Basic functionality should work, for enhanced features not everything is working yet.
+All functionality of first version implemented and should work.
+
+Open issues: GUI responsiveness in rare situations, more testing, …

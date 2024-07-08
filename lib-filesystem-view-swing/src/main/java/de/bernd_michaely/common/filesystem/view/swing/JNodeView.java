@@ -6,6 +6,8 @@ import de.bernd_michaely.common.filesystem.view.base.PathView;
 import java.lang.System.Logger;
 import java.lang.ref.WeakReference;
 import java.util.Collection;
+import java.util.List;
+import java.util.SortedMap;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
@@ -81,27 +83,23 @@ class JNodeView implements NodeView
 	}
 
 	@Override
-	public void insertSubNodeAt(int index, NodeView subNodeView)
+	public void insertSubNodes(SortedMap<Integer, NodeView> mapSubNodeViews)
 	{
 		invokeLater(() ->
 		{
-			if (subNodeView instanceof JNodeView jSubNodeView)
+			final var model = getTreeModel();
+			mapSubNodeViews.forEach((index, subNodeView) ->
 			{
-				final JTree tree = getTree();
-				if (tree != null)
+				if (model != null && subNodeView instanceof JNodeView jSubNodeView)
 				{
-					final var model = getTreeModel();
-					if (model != null)
-					{
-						model.insertNodeInto(jSubNodeView.treeNode, treeNode, index);
-					}
+					model.insertNodeInto(jSubNodeView.treeNode, treeNode, index);
 				}
-			}
-			else
-			{
-				logger.log(WARNING, getClass().getName() +
-					"::insertSubNodeAt : Invalid NodeView : " + subNodeView);
-			}
+				else
+				{
+					logger.log(WARNING, getClass().getName() +
+						"::insertSubNodeAt : Invalid NodeView : " + subNodeView);
+				}
+			});
 		});
 	}
 
@@ -135,19 +133,22 @@ class JNodeView implements NodeView
 	}
 
 	@Override
-	public void removeSubNodeAt(int index)
+	public void removeSubNodes(List<Integer> indices)
 	{
 		invokeLater(() ->
 		{
-			if (index >= 0 && index < treeNode.getChildCount())
+			final var treeModel = getTreeModel();
+			indices.forEach(index ->
 			{
-				final var treeModel = getTreeModel();
-				if (treeModel != null &&
-					treeModel.getChild(treeNode, index) instanceof MutableTreeNode mutableTreeNode)
+				if (index >= 0 && index < treeNode.getChildCount())
 				{
-					treeModel.removeNodeFromParent(mutableTreeNode);
+					if (treeModel != null &&
+						treeModel.getChild(treeNode, index) instanceof MutableTreeNode mutableTreeNode)
+					{
+						treeModel.removeNodeFromParent(mutableTreeNode);
+					}
 				}
-			}
+			});
 		});
 	}
 

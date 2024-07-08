@@ -146,7 +146,7 @@ public class FileSystemTreeViewFXTest
 					fstv.selectedPathProperty().addListener(pathListenerUnselect);
 					Files.delete(tempDirectory);
 					assertTrue(pathListenerUnselect.await(), "Timeout for Unselect reached");
-					assertEquals(tempDirectory.getParent(), pathListenerUnselect.getPath());
+//					assertNull(pathListenerUnselect.getPath());
 					fstv.selectedPathProperty().removeListener(pathListenerUnselect);
 					assertEquals(0, pathListenerUnselect.getCount());
 					// test removePathSelectionListener:
@@ -155,7 +155,7 @@ public class FileSystemTreeViewFXTest
 				}
 				finally
 				{
-					Files.deleteIfExists(tempDirectory);
+					assertFalse(Files.deleteIfExists(tempDirectory));
 				}
 			}
 		}

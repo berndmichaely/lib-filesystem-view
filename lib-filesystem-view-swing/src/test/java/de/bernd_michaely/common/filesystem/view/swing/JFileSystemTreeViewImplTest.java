@@ -119,7 +119,7 @@ public class JFileSystemTreeViewImplTest
 				}
 				finally
 				{
-					Files.deleteIfExists(tempDirectory);
+					assertFalse(Files.deleteIfExists(tempDirectory));
 				}
 			}
 		}

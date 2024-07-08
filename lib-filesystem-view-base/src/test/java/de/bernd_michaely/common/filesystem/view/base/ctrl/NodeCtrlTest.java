@@ -39,6 +39,8 @@ import org.junit.jupiter.api.*;
 
 import static com.google.common.jimfs.Configuration.*;
 import static com.google.common.jimfs.WatchServiceConfiguration.polling;
+import static de.bernd_michaely.common.filesystem.view.base.ctrl.NodeCtrlTest.EntryType.*;
+import static de.bernd_michaely.common.filesystem.view.base.ctrl.NodeCtrlTest.WatchAction.*;
 import static java.nio.file.StandardOpenOption.*;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.*;
@@ -534,40 +536,59 @@ public class NodeCtrlTest
 		}
 	}
 
+	enum WatchAction
+	{
+		ADDED, REMOVED
+	}
+
+	enum EntryType
+	{
+		FILE, DIRECTORY
+	}
+
 	/**
 	 * Tests, whether the watch service of a watched node detects an added or
 	 * removed directory entry correctly. If successful, the method blocks until
 	 * the expected event has been detected. If unsuccessful, the assertion fails
 	 * by a timeout.
 	 *
-	 * @param nodeView the node view of a watched tree node
-	 * @param add      true, if subPath is to be added, false, if removed
-	 * @param subPath  a subPath to be added to or removed from the nodeView
-	 * @param isFile   true, if subPath should be a file, false, if a directory
-	 * @param index    the expected position of the added or removed subPath
+	 * @param nodeView    the node view of a watched tree node
+	 * @param watchAction indicates whether subPath is to be added or removed
+	 * @param subPath     a subPath to be added to or removed from the nodeView
+	 * @param entryType   indicates whether subPath should be a file or directory
+	 * @param index       the expected position of the added or removed subPath
 	 * @throws IOException
 	 */
-	private void _watchWatchService(NodeViewImpl nodeView, boolean add, Path subPath, boolean isFile, int index)
+	private void _watchWatchService(NodeViewImpl nodeView, WatchAction watchAction,
+		Path subPath, EntryType entryType, int index)
 		throws IOException
 	{
+		requireNonNull(watchAction, "WatchAction is null");
+		requireNonNull(entryType, "EntryType is null");
 		final var countDownLatch = new CountDownLatch(1);
 		nodeView.setUnitTestCallback((boolean added, DirectoryEntry subDirectoryEntry, int actualIndex) ->
 		{
 			final String action = added ? "Added  " : "Removed";
 			System.out.format("%s »%s« @ %d%n", action, subDirectoryEntry, actualIndex);
-			assertEquals(add, added);
+			assertEquals(watchAction.equals(ADDED), added);
 			assertEquals(subPath, subDirectoryEntry.getPath());
 			assertEquals(index, actualIndex);
 			countDownLatch.countDown();
 		});
 		try
 		{
-			final BooleanSupplier checkEntryExists = () ->
-				isFile ? Files.isRegularFile(subPath) : Files.isDirectory(subPath);
-			if (add)
+			final BooleanSupplier checkEntryExists = () -> entryType.equals(FILE) ?
+				Files.isRegularFile(subPath) : Files.isDirectory(subPath);
+			if (watchAction.equals(ADDED))
 			{
 				assertFalse(checkEntryExists);
-				assertEquals(subPath, isFile ? Files.createFile(subPath) : Files.createDirectory(subPath));
+				switch (entryType)
+				{
+					case DIRECTORY ->
+						assertEquals(subPath, Files.createDirectory(subPath));
+					case FILE -> assertEquals(subPath, Files.createFile(subPath));
+					default -> throw new AssertionError("Invalid EntryType");
+				}
 				assertTrue(checkEntryExists);
 			}
 			else
@@ -642,17 +663,17 @@ public class NodeCtrlTest
 				assertFalse(watchServiceCtrl.isPathWatched(tempDirectoryBase));
 				nodeView.setExpanded(true);
 				assertTrue(watchServiceCtrl.isPathWatched(tempDirectoryBase));
-				_watchWatchService(nodeView, true, subDir2, false, 0);
+				_watchWatchService(nodeView, ADDED, subDir2, DIRECTORY, 0);
 				_wait_(waitTime);
-				_watchWatchService(nodeView, true, subDir1, false, 0);
+				_watchWatchService(nodeView, ADDED, subDir1, DIRECTORY, 0);
 				_wait_(waitTime);
-				_watchWatchService(nodeView, false, subDir2, false, 1);
+				_watchWatchService(nodeView, REMOVED, subDir2, DIRECTORY, 1);
 				_wait_(waitTime);
-				_watchWatchService(nodeView, true, subDir3, false, 1);
+				_watchWatchService(nodeView, ADDED, subDir3, DIRECTORY, 1);
 				_wait_(waitTime);
-				_watchWatchService(nodeView, false, subDir1, false, 0);
+				_watchWatchService(nodeView, REMOVED, subDir1, DIRECTORY, 0);
 				_wait_(waitTime);
-				_watchWatchService(nodeView, false, subDir3, false, 0);
+				_watchWatchService(nodeView, REMOVED, subDir3, DIRECTORY, 0);
 				nodeView.setExpanded(false);
 				assertFalse(watchServiceCtrl.isPathWatched(tempDirectoryBase));
 			}
@@ -1090,7 +1111,7 @@ public class NodeCtrlTest
 				nodeView.setExpanded(true);
 				assertTrue(watchServiceCtrl.isPathWatched(targetDirectory));
 				final Path targetFile = targetDirectory.resolve("test.zip");
-				_watchWatchService(nodeView, true, targetFile, true, 3);
+				_watchWatchService(nodeView, ADDED, targetFile, FILE, 3);
 				nodeView.setExpanded(false);
 				assertFalse(watchServiceCtrl.isPathWatched(targetDirectory));
 			}
@@ -1118,7 +1139,7 @@ public class NodeCtrlTest
 			assertEquals(subPath, fstv.getSelectedPath());
 			assertTrue(watchServiceCtrl.isPathWatched(subPath));
 			assertEquals(numSubNodes, nodeView.getSubNodes().size());
-			_watchWatchService(nodeView, false, subPath, false, index);
+			_watchWatchService(nodeView, REMOVED, subPath, DIRECTORY, index);
 			assertEquals(numSubNodes - 1, nodeView.getSubNodes().size());
 			assertFalse(watchServiceCtrl.isPathWatched(subPath));
 			// automatic unselection of removed entries is not implemented in the
@@ -1130,7 +1151,7 @@ public class NodeCtrlTest
 			fstv.clearSelection();
 			assertFalse(fstv.isPathSelected());
 			assertTrue(Files.notExists(subPath));
-			_watchWatchService(nodeView, true, subPath, false, index);
+			_watchWatchService(nodeView, ADDED, subPath, DIRECTORY, index);
 			assertFalse(watchServiceCtrl.isPathWatched(subPath));
 			assertNotEquals(subPath, fstv.getSelectedPath());
 			fstv.expandPath(subPath, true, true);
@@ -1138,7 +1159,7 @@ public class NodeCtrlTest
 			assertEquals(subPath, fstv.getSelectedPath());
 			assertTrue(watchServiceCtrl.isPathWatched(subPath));
 			assertEquals(numSubNodes, nodeView.getSubNodes().size());
-			_watchWatchService(nodeView, false, subPath, false, index);
+			_watchWatchService(nodeView, REMOVED, subPath, DIRECTORY, index);
 			assertEquals(numSubNodes - 1, nodeView.getSubNodes().size());
 			assertFalse(watchServiceCtrl.isPathWatched(subPath));
 		}
@@ -1157,7 +1178,6 @@ public class NodeCtrlTest
 	}
 
 	@Test
-	@Disabled("Test currently fails by timeout → temporarily disable long running test")
 	public void testWatchServiceRemoveExpandedNode_DefaultFileSystem() throws IOException
 	{
 		final Path path = Files.createTempDirectory("UnitTest_" +

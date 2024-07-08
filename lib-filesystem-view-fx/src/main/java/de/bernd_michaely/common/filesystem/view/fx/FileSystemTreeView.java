@@ -39,7 +39,7 @@ public interface FileSystemTreeView extends IFileSystemTreeView
 	static FileSystemTreeView createInstance(@Nullable Configuration configuration)
 	{
 		return new FileSystemTreeViewFX(configuration != null ?
-			configuration : Configuration.builder().build());
+			configuration : Configuration.getDefault());
 	}
 
 	/**

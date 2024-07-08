@@ -26,7 +26,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -90,17 +92,23 @@ public final class SubNodes
 			this.nodeConfig.getDirectoryEntryComparatorSupplier().get());
 		this.subNodesPathView = new SubNodesPathView(subNodes,
 			this.nodeConfig.getFileNameComparatorSupplier().get());
-		subNodes.setOnItemAdd((subDirectoryEntry, index) ->
+		subNodes.setOnItemsAdd(indices ->
 		{
-			final NodeCtrl subNodeCtrl = subDirectoryEntry.initNodeCtrl(getNodeConfig());
-			final NodeView subNodeView = subNodeCtrl.getNodeView();
-			subNodeView.setLeafNode(subNodeCtrl.isLeafNode());
-			getNodeView().insertSubNodeAt(index, subNodeView);
-			if (getNodeView() instanceof UnitTestCallback callback)
+			final SortedMap<Integer, NodeView> mapSubNodeViews = new TreeMap<>();
+			indices.forEach(index ->
 			{
-				logger.log(TRACE, () -> "Calling callback for ADD »" + subDirectoryEntry + "« @ " + index);
-				callback.call(true, subDirectoryEntry, index);
-			}
+				final DirectoryEntry subDirectoryEntry = subNodes.get(index);
+				final NodeCtrl subNodeCtrl = subDirectoryEntry.initNodeCtrl(getNodeConfig());
+				final NodeView subNodeView = subNodeCtrl.getNodeView();
+				subNodeView.setLeafNode(subNodeCtrl.isLeafNode());
+				mapSubNodeViews.put(index, subNodeView);
+				if (getNodeView() instanceof UnitTestCallback callback)
+				{
+					logger.log(TRACE, () -> "Calling callback for ADD »" + subDirectoryEntry + "« @ " + index);
+					callback.call(true, subDirectoryEntry, index);
+				}
+			});
+			getNodeView().insertSubNodes(mapSubNodeViews);
 		});
 		subNodes.setOnItemsAddAll(entries ->
 		{
@@ -115,24 +123,28 @@ public final class SubNodes
 			getNodeView().addAllSubNodes(subNodeViews);
 			logger.log(TRACE, () -> "ADD ALL " + entries.size() + " items");
 		});
-		subNodes.setOnItemRemove((subDirectoryEntry, index) ->
+		subNodes.setOnItemsRemove((List<Integer> indices) ->
 		{
-			logger.log(TRACE, () -> "Removing »" + subDirectoryEntry + "«");
-			final NodeCtrl subNodeCtrl = subDirectoryEntry.getNodeCtrl();
-			if (subNodeCtrl != null)
+			getNodeView().removeSubNodes(indices);
+			indices.forEach(index ->
 			{
-				getNodeView().removeSubNodeAt(index);
-				subNodeCtrl.setExpanded(false);
-			}
-			else
-			{
-				logger.log(WARNING, () -> getClass().getName() + " : Invalid subNodeCtrl in OnItemRemove handler");
-			}
-			if (getNodeView() instanceof UnitTestCallback callback)
-			{
-				logger.log(TRACE, () -> "Calling callback for REMOVE »" + subDirectoryEntry + "« @ " + index);
-				callback.call(false, subDirectoryEntry, index);
-			}
+				final DirectoryEntry subDirectoryEntry = subNodes.get(index);
+				logger.log(TRACE, () -> "Removing »" + subDirectoryEntry + "«");
+				final NodeCtrl subNodeCtrl = subDirectoryEntry.getNodeCtrl();
+				if (subNodeCtrl != null)
+				{
+					subNodeCtrl.setExpanded(false);
+				}
+				else
+				{
+					logger.log(WARNING, () -> getClass().getName() + " : Invalid subNodeCtrl in OnItemRemove handler");
+				}
+				if (getNodeView() instanceof UnitTestCallback callback)
+				{
+					logger.log(TRACE, () -> "Calling callback for REMOVE »" + subDirectoryEntry + "« @ " + index);
+					callback.call(false, subDirectoryEntry, index);
+				}
+			});
 		});
 		subNodes.setOnItemsClear(entries ->
 		{

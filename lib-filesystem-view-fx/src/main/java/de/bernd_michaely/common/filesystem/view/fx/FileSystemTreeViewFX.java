@@ -13,7 +13,6 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.Region;
@@ -46,10 +45,21 @@ class FileSystemTreeViewFX implements FileSystemTreeView
 		this.treeView.getSelectionModel().getSelectedItems()
 			.addListener((Change<? extends TreeItem<PathView>> change) ->
 			{
-				final ObservableList<? extends TreeItem<PathView>> list = change.getList();
-				selectedPathProperty.setValue(list.isEmpty() ? null : list.get(0).getValue().getPath());
+				while (change.next())
+				{
+					if (change.wasAdded())
+					{
+						for (TreeItem<PathView> treeItem : change.getAddedSubList())
+						{
+							selectedPathProperty.setValue(treeItem.getValue().getPath());
+						}
+					}
+					else if (change.wasRemoved())
+					{
+						selectedPathProperty.setValue(null);
+					}
+				}
 			});
-		this.rootNodeCtrl.setExpanded(true);
 	}
 
 	@Override
@@ -63,7 +73,12 @@ class FileSystemTreeViewFX implements FileSystemTreeView
 				final TreeItem<PathView> treeItem = nodeViewFX.getTreeItem();
 				if (select)
 				{
-					Platform.runLater(() -> treeView.getSelectionModel().select(treeItem));
+					Platform.runLater(() ->
+					{
+						final var selectionModel = treeView.getSelectionModel();
+						selectionModel.select(treeItem);
+						treeView.scrollTo(selectionModel.getSelectedIndex());
+					});
 				}
 				return treeItem.getValue().getPath();
 			}

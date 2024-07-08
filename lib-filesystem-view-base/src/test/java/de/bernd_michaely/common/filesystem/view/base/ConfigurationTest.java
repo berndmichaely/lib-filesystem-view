@@ -32,65 +32,66 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class ConfigurationTest
 {
-  private void testNonNullness(Configuration configuration)
-  {
-    assertNotNull(configuration.fileSystem());
-    assertNotNull(configuration.fileNameComparator());
-    assertNotNull(configuration.userNodeConfiguration());
-  }
+	private void testNonNullness(Configuration configuration)
+	{
+		assertNotNull(configuration.fileSystem());
+		assertNotNull(configuration.fileNameComparator());
+		assertNotNull(configuration.userNodeConfiguration());
+	}
 
-  private boolean getRequestWatchServiceDefault()
-  {
-    return Configuration.builder().build().requestWatchService();
-  }
+	private boolean getRequestWatchServiceDefault()
+	{
+		return Configuration.getDefault().requestWatchService();
+	}
 
-  @Test
-  public void testRequestWatchServiceDefault()
-  {
-    assertTrue(getRequestWatchServiceDefault());
-  }
+	@Test
+	public void testRequestWatchServiceDefault()
+	{
+		assertTrue(getRequestWatchServiceDefault());
+	}
 
-  @Test
-  public void testBuilderDefault()
-  {
-    final Configuration configuration = Configuration.builder().build();
-    testNonNullness(configuration);
-    assertEquals(FileSystems.getDefault(), configuration.fileSystem());
-    assertEquals(SimpleUserNodeConfiguration.getInstance(), configuration.userNodeConfiguration());
-  }
+	@Test
+	public void testBuilderDefault()
+	{
+		final Configuration configuration = Configuration.builder().build();
+		testNonNullness(configuration);
+		assertEquals(configuration, Configuration.getDefault());
+		assertEquals(FileSystems.getDefault(), configuration.fileSystem());
+		assertEquals(SimpleUserNodeConfiguration.getInstance(), configuration.userNodeConfiguration());
+	}
 
-  @Test
-  public void testBuilderWithParameter()
-  {
-    try (final FileSystem fileSystem = Jimfs.newFileSystem())
-    {
-      final var comparator = ((Comparator<String>) String::compareTo).reversed();
-      final var userNodeConfiguration = new UserNodeConfiguration()
-      {
-        @Override
-        public UserNodeConfiguration getUserNodeConfigurationFor(Path path)
-        {
-          return this;
-        }
-      };
-      final boolean requestWatchService = !getRequestWatchServiceDefault();
-      final Configuration configuration = Configuration.builder()
-        .setFileSystem(fileSystem)
-        .setFileNameComparator(comparator)
-        .setRequestingWatchService(requestWatchService)
-        .setUserNodeConfiguration(userNodeConfiguration)
-        .build();
-      testNonNullness(configuration);
-      assertNotEquals(FileSystems.getDefault(), configuration.fileSystem());
-      assertEquals(fileSystem, configuration.fileSystem());
-      assertEquals(comparator, configuration.fileNameComparator());
-      assertNotEquals(SimpleUserNodeConfiguration.getInstance(), configuration.userNodeConfiguration());
-      assertEquals(userNodeConfiguration, configuration.userNodeConfiguration());
-      assertEquals(requestWatchService, configuration.requestWatchService());
-    }
-    catch (IOException ex)
-    {
-      throw new IllegalStateException(ex);
-    }
-  }
+	@Test
+	public void testBuilderWithParameter()
+	{
+		try (final FileSystem fileSystem = Jimfs.newFileSystem())
+		{
+			final var comparator = ((Comparator<String>) String::compareTo).reversed();
+			final var userNodeConfiguration = new UserNodeConfiguration()
+			{
+				@Override
+				public UserNodeConfiguration getUserNodeConfigurationFor(Path path)
+				{
+					return this;
+				}
+			};
+			final boolean requestWatchService = !getRequestWatchServiceDefault();
+			final Configuration configuration = Configuration.builder()
+				.setFileSystem(fileSystem)
+				.setFileNameComparator(comparator)
+				.setRequestingWatchService(requestWatchService)
+				.setUserNodeConfiguration(userNodeConfiguration)
+				.build();
+			testNonNullness(configuration);
+			assertNotEquals(FileSystems.getDefault(), configuration.fileSystem());
+			assertEquals(fileSystem, configuration.fileSystem());
+			assertEquals(comparator, configuration.fileNameComparator());
+			assertNotEquals(SimpleUserNodeConfiguration.getInstance(), configuration.userNodeConfiguration());
+			assertEquals(userNodeConfiguration, configuration.userNodeConfiguration());
+			assertEquals(requestWatchService, configuration.requestWatchService());
+		}
+		catch (IOException ex)
+		{
+			throw new IllegalStateException(ex);
+		}
+	}
 }

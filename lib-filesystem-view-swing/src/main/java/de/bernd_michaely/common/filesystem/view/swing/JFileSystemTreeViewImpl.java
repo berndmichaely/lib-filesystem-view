@@ -24,6 +24,7 @@ import javax.swing.tree.TreeSelectionModel;
 import org.checkerframework.checker.guieffect.qual.*;
 import org.checkerframework.checker.nullness.qual.*;
 
+import static java.lang.Integer.min;
 import static java.lang.System.Logger.Level.*;
 import static javax.swing.SwingUtilities.invokeLater;
 
@@ -109,24 +110,25 @@ class JFileSystemTreeViewImpl implements JFileSystemTreeView
 	@UIEffect
 	JFileSystemTreeViewImpl(Configuration configuration)
 	{
-		this.jTree = new JTree();
-		this.rootNodeCtrl = RootNodeCtrl.create(configuration, nodeView ->
+		jTree = new JTree();
+		rootNodeCtrl = RootNodeCtrl.create(configuration, pathView ->
 		{
-			final var jNodeView = new JNodeView(nodeView);
+			final var jNodeView = new JNodeView(pathView);
 			jNodeView.setTree(jTree);
 			return jNodeView;
 		});
-		if (this.rootNodeCtrl.getNodeView() instanceof JNodeView jNodeView)
+		if (rootNodeCtrl.getNodeView() instanceof JNodeView jNodeView)
 		{
-			this.jTree.setModel(new DefaultTreeModel(jNodeView.getTreeNode(), true));
-			this.jTree.setRootVisible(false);
-			this.jTree.setShowsRootHandles(true);
-			this.jTree.setExpandsSelectedPaths(true);
-			this.jTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-			this.jTree.addTreeSelectionListener(new TreeSelectionListenerImpl());
-			this.jTree.addTreeExpansionListener(new TreeExpansionListenerImpl());
+			jTree.setModel(new DefaultTreeModel(jNodeView.getTreeNode(), true));
 		}
-		this.jScrollPane = new JScrollPane(this.jTree);
+		jTree.setRootVisible(false);
+		jTree.setShowsRootHandles(true);
+		jTree.setScrollsOnExpand(true);
+		jTree.setExpandsSelectedPaths(true);
+		jTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+		jTree.addTreeSelectionListener(new TreeSelectionListenerImpl());
+		jTree.addTreeExpansionListener(new TreeExpansionListenerImpl());
+		this.jScrollPane = new JScrollPane(jTree);
 	}
 
 	@Override
@@ -151,7 +153,17 @@ class JFileSystemTreeViewImpl implements JFileSystemTreeView
 			{
 				if (select && jNodeView.getTreeNode() instanceof DefaultMutableTreeNode treeNode)
 				{
-					invokeLater(() -> jTree.getSelectionModel().setSelectionPath(new TreePath(treeNode.getPath())));
+					invokeLater(() ->
+					{
+						final TreeSelectionModel selectionModel = jTree.getSelectionModel();
+						selectionModel.setSelectionPath(new TreePath(treeNode.getPath()));
+						final int index = selectionModel.getMaxSelectionRow();
+						if (index >= 0)
+						{
+							final int size = jTree.getRowCount();
+							jTree.scrollRowToVisible(min(index + 1, size - 1));
+						}
+					});
 				}
 				return jNodeView.getPathView().getPath();
 			}

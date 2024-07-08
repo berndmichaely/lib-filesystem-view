@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedMap;
 
 /**
  * NodeView implementation for unit tests.
@@ -47,15 +48,15 @@ class NodeViewImpl implements NodeView, UnitTestCallback
 	}
 
 	@Override
-	public void insertSubNodeAt(int index, NodeView subNodeView)
+	public void insertSubNodes(SortedMap<Integer, NodeView> mapSubNodeViews)
 	{
 		if (beVerbose)
 		{
-			System.out.println("NodeView Test Impl : insertSubNode »" + subNodeView + "« @ " + index + " for »" +
-				getPathView().getPath() + "«");
+			System.out.println("NodeView Test Impl : insertSubNodes for »" +
+				getPathView().getPath() + "« : " + mapSubNodeViews);
 			System.out.println("                     -> subnodes: " + getSubNodes());
 		}
-		nodeViews.add(index, subNodeView);
+		mapSubNodeViews.forEach(nodeViews::add);
 		if (beVerbose)
 		{
 			System.out.println("                     => subnodes: " + getSubNodes());
@@ -69,15 +70,15 @@ class NodeViewImpl implements NodeView, UnitTestCallback
 	}
 
 	@Override
-	public void removeSubNodeAt(int index)
+	public void removeSubNodes(List<Integer> indices)
 	{
 		if (beVerbose)
 		{
-			System.out.println("NodeView Test Impl : removeSubNodeAt " + index + " for »" +
-				getPathView().getPath() + "«");
+			System.out.println("NodeView Test Impl : removeSubNodes at indices " + indices +
+				" for »" + getPathView().getPath() + "«");
 			System.out.println("                     -> subnodes: " + getSubNodes());
 		}
-		nodeViews.remove(index);
+		indices.forEach(index -> nodeViews.remove((int) index));
 		if (beVerbose)
 		{
 			System.out.println("                     => subnodes: " + getSubNodes());

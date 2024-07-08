@@ -37,7 +37,7 @@ public interface JFileSystemTreeView extends IFileSystemTreeView
 	static JFileSystemTreeView createInstance(@Nullable Configuration configuration)
 	{
 		return new JFileSystemTreeViewImpl(configuration != null ?
-			configuration : Configuration.builder().build());
+			configuration : Configuration.getDefault());
 	}
 
 	/**
