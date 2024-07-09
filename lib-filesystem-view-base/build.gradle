@@ -12,7 +12,7 @@ wrapper {
 }
 
 group = 'de.bernd_michaely'
-version = '0.9.3'
+version = '0.9.4'
 
 ext.versionJUnit = '5.9.2'
 ext.versionCheckerFramework = '3.45.0'

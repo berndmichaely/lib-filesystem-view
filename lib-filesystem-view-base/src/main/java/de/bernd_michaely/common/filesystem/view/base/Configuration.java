@@ -32,6 +32,9 @@ public record Configuration(
 	Comparator<String> fileNameComparator,
 	UserNodeConfiguration userNodeConfiguration)
 	{
+	/**
+	 * Default file name comparator.
+	 */
 	private static class FileNameComparator implements Comparator<String>
 	{
 		private final FileSystem fileSystem;

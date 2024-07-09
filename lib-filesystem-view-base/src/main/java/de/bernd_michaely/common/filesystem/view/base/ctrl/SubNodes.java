@@ -18,20 +18,14 @@ package de.bernd_michaely.common.filesystem.view.base.ctrl;
 import de.bernd_michaely.common.filesystem.view.base.NodeView;
 import de.bernd_michaely.common.filesystem.view.base.UserNodeConfiguration;
 import de.bernd_michaely.common.filesystem.view.base.common.SynchronizableSortedDistinctList;
-import java.io.IOException;
 import java.lang.System.Logger;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.*;
 
 import static de.bernd_michaely.common.filesystem.view.base.ctrl.SubNodes.ExpansionState.*;
@@ -53,23 +47,31 @@ public final class SubNodes
 	private final NodeConfig nodeConfig;
 	private final UserNodeConfiguration userNodeConfiguration;
 	private final NodeView nodeView;
-	private ExpansionState expansionState = COLLAPSED;
+	private volatile ExpansionState expansionState = COLLAPSED;
 	private final SubNodesPathView subNodesPathView;
 
 	enum ExpansionState
 	{
-		COLLAPSED(false), EXPANDING(true), EXPANDED(true);
+		COLLAPSED, EXPANDING, WAITING, EXPANDED;
 
-		private final boolean targetState;
+		private static final EnumSet<ExpansionState> setExpand =
+			EnumSet.of(EXPANDING, WAITING, EXPANDED);
 
-		ExpansionState(boolean targetState)
+		boolean isIn(ExpansionState... expansionStates)
 		{
-			this.targetState = targetState;
+			for (ExpansionState expansionState : expansionStates)
+			{
+				if (equals(expansionState))
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 
-		boolean getTargetState()
+		boolean asBoolean()
 		{
-			return targetState;
+			return setExpand.contains(this);
 		}
 	}
 
@@ -137,11 +139,13 @@ public final class SubNodes
 				}
 				else
 				{
-					logger.log(WARNING, () -> getClass().getName() + " : Invalid subNodeCtrl in OnItemRemove handler");
+					logger.log(WARNING, () -> getClass().getName() +
+						" : Invalid subNodeCtrl in OnItemRemove handler");
 				}
 				if (getNodeView() instanceof UnitTestCallback callback)
 				{
-					logger.log(TRACE, () -> "Calling callback for REMOVE »" + subDirectoryEntry + "« @ " + index);
+					logger.log(TRACE, () -> "Calling callback for REMOVE »" +
+						subDirectoryEntry + "« @ " + index);
 					callback.call(false, subDirectoryEntry, index);
 				}
 			});
@@ -157,7 +161,8 @@ public final class SubNodes
 				}
 				else
 				{
-					logger.log(WARNING, () -> getClass().getName() + " : Invalid subNodeCtrl in OnItemsClear handler");
+					logger.log(WARNING, () -> getClass().getName() +
+						" : Invalid subNodeCtrl in OnItemsClear handler");
 				}
 			});
 			getNodeView().clear();
@@ -197,7 +202,7 @@ public final class SubNodes
 
 	synchronized boolean isExpanded()
 	{
-		return expansionState.getTargetState();
+		return expansionState.asBoolean();
 	}
 
 	synchronized void setExpanded(boolean expanded)
@@ -206,118 +211,52 @@ public final class SubNodes
 		{
 			if (expanded)
 			{
-				expansionState = EXPANDING;
-				try
-				{
-					doExpand();
-				}
-				finally
-				{
-					expansionState = EXPANDED;
-				}
+				setExpansionState(EXPANDING);
 			}
 			else
 			{
-				try
-				{
-					doCollapse();
-				}
-				finally
-				{
-					expansionState = COLLAPSED;
-				}
+				setExpansionState(COLLAPSED);
 			}
 		}
 	}
 
-	/**
-	 * Applies path filters and returns a new DirectoryEntry or null. This method
-	 * is to be used for node expansion and for watch service.
-	 *
-	 * @param path the Path to encapsulate
-	 * @return a new DirectoryEntry or null
-	 */
-	synchronized private @Nullable
-	DirectoryEntry pathToDirectoryEntry(Path path)
+	synchronized private void setExpansionState(ExpansionState newState)
 	{
-		final var unc = getUserNodeConfiguration();
-		final var linkOptions = unc.getLinkOptions();
-		if (Files.isDirectory(path, linkOptions))
+		switch (newState)
 		{
-			return unc.isCreatingNodeForDirectory(path) ?
-				new DirectoryEntrySubDirectory(path) : null;
-		}
-		else if (Files.isRegularFile(path, linkOptions))
-		{
-			return unc.isCreatingNodeForFile(path) ?
-				new DirectoryEntryRegularFile(path, unc) : null;
-		}
-		else
-		{
-			return null;
-		}
-	}
-
-	synchronized private void doExpand()
-	{
-		getNodeView().setExpanded(true);
-		updateDirectoryEntries();
-	}
-
-	synchronized private void readFileSystem(@Nullable FileSystem fileSystem, boolean skipSingleRoot)
-	{
-		if (fileSystem != null)
-		{
-			if (fileSystem.isOpen())
+			case COLLAPSED ->
 			{
-				final SortedSet<DirectoryEntry> set = new TreeSet<>(
-					getNodeConfig().getDirectoryEntryComparatorSupplier().get());
-				fileSystem.getRootDirectories().forEach(path ->
-					set.add(new DirectoryEntrySubDirectory(path)));
-				if (skipSingleRoot && set.size() == 1 && set.first().getName().equals("/"))
+				if (!this.expansionState.isIn(COLLAPSED))
 				{
-					readDirectory(fileSystem.getPath("/"));
-				}
-				else
-				{
-					subNodes.synchronizeTo(set);
+					try
+					{
+						doCollapse();
+					}
+					finally
+					{
+						this.expansionState = COLLAPSED;
+					}
 				}
 			}
-			else
+			case EXPANDING ->
 			{
-				logger.log(WARNING, () -> getClass() +
-					"#doUpdateDirectoryEntries(FileSystem) : FileSystem not open : " + fileSystem);
+				this.expansionState = EXPANDING;
+				getNodeView().setExpanded(true);
+				updateDirectoryEntries();
 			}
+			case WAITING ->
+			{
+			}
+			case EXPANDED ->
+			{
+				this.expansionState = newState;
+			}
+			default -> throw new AssertionError("Invalid ExpansionState");
 		}
 	}
 
-	synchronized private void readDirectory(Path directory)
+	private void startWatchService()
 	{
-		try (final Stream<Path> stream = Files.list(directory))
-		{
-			final SortedSet<DirectoryEntry> sortedSet = new TreeSet<>(
-				getNodeConfig().getDirectoryEntryComparatorSupplier().get());
-			// stream.map(this::pathToDirectoryEntry).filter(Objects::nonNull).forEach(sortedSet::add);
-			// Note: filter(Objects::nonNull) currently won't work, see:
-			// https://github.com/typetools/checker-framework/issues/1345
-			stream.forEach(path ->
-			{
-				final var entry = pathToDirectoryEntry(path);
-				if (entry != null)
-				{
-					sortedSet.add(entry);
-				}
-			});
-			subNodes.synchronizeTo(sortedSet);
-		}
-		catch (AccessDeniedException ex)
-		{
-			logger.log(INFO, () -> "Access denied for path »" + ex.getFile() + "«");
-		}
-		catch (IOException ex)
-		{
-			logger.log(WARNING, () -> "reading directory", ex);
-		}
 		getNodeConfig().getWatchServiceCtrl().registerPath(
 			getDirectoryEntry().getPath(), (eventKind, context) ->
 		{
@@ -326,7 +265,8 @@ public final class SubNodes
 				if (context != null)
 				{
 					final Path subPath = getDirectoryEntry().getPath().resolve(context.toString());
-					final var entry = pathToDirectoryEntry(subPath);
+					final var entry = UserNodeConfigurationUtil.pathToDirectoryEntry(
+						getUserNodeConfiguration(), subPath);
 					if (entry != null)
 					{
 						add(entry);
@@ -359,18 +299,62 @@ public final class SubNodes
 			}
 			else
 			{
-				if (directoryEntry instanceof DirectoryEntrySubDirectory entry)
-				{
-					readDirectory(entry.getPath());
-				}
-				else if (directoryEntry instanceof DirectoryEntryRegularFile entry)
-				{
-					readFileSystem(entry.getCustomFileSystem(), true);
-				}
-				else if (directoryEntry instanceof DirectoryEntryFileSystem entry)
-				{
-					readFileSystem(entry.getFileSystem(), false);
-				}
+				readDirectoryEntries(directoryEntry);
+			}
+		}
+	}
+
+	private @Nullable
+	DirectoryReaderTask createDirectoryReaderTask(DirectoryEntry directoryEntry)
+	{
+		final var comparator = getNodeConfig().getDirectoryEntryComparatorSupplier().get();
+		final DirectoryReaderTask task;
+		if (directoryEntry instanceof DirectoryEntrySubDirectory entry)
+		{
+			task = new DirectoryReaderTask(this::handleDirectoryReaderTask,
+				entry.getPath(), comparator, getUserNodeConfiguration());
+		}
+		else if (directoryEntry instanceof DirectoryEntryRegularFile entry)
+		{
+			final var customFileSystem = entry.getCustomFileSystem();
+			task = customFileSystem != null ? new DirectoryReaderTask(this::handleDirectoryReaderTask,
+				customFileSystem, true, comparator, getUserNodeConfiguration()) : null;
+		}
+		else if (directoryEntry instanceof DirectoryEntryFileSystem entry)
+		{
+			task = new DirectoryReaderTask(this::handleDirectoryReaderTask,
+				entry.getFileSystem(), false, comparator, getUserNodeConfiguration());
+		}
+		else
+		{
+			task = null;
+		}
+		return task;
+	}
+
+	private synchronized void readDirectoryEntries(DirectoryEntry directoryEntry)
+	{
+		final var task = createDirectoryReaderTask(directoryEntry);
+		if (task != null)
+		{
+//			java.util.concurrent.ForkJoinPool.commonPool().submit(task);
+			task.run();
+		}
+		else
+		{
+			logger.log(WARNING, "readDirectoryEntries : task is null");
+		}
+	}
+
+	private synchronized void handleDirectoryReaderTask(DirectoryReaderTask.TaskResult result)
+	{
+		if (this.expansionState.asBoolean())
+		{
+			subNodes.synchronizeTo(result.sortedSet());
+			setExpansionState(EXPANDED);
+			if (result.startingWatchService())
+			{
+				startWatchService();
 			}
 		}
 	}
@@ -408,16 +392,11 @@ public final class SubNodes
 			subNodes.clear();
 			entry.clearCustomFileSystem();
 		}
-		else if (directoryEntry instanceof DirectoryEntryFileSystem entry)
+		else if (directoryEntry instanceof DirectoryEntryFileSystem)
 		{
 			getNodeView().setExpanded(false);
 			subNodes.clear();
 		}
-	}
-
-	synchronized DirectoryEntry get(int index)
-	{
-		return subNodes.get(index);
 	}
 
 	synchronized boolean add(DirectoryEntry item)
@@ -428,11 +407,6 @@ public final class SubNodes
 	synchronized boolean removeItem(DirectoryEntry item)
 	{
 		return subNodes.removeItem(item);
-	}
-
-	synchronized int size()
-	{
-		return subNodes.size();
 	}
 
 	synchronized boolean isEmpty()
