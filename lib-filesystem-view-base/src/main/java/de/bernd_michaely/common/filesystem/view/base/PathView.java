@@ -15,7 +15,6 @@
  */
 package de.bernd_michaely.common.filesystem.view.base;
 
-import de.bernd_michaely.common.filesystem.view.base.ctrl.DirectoryEntry;
 import java.nio.file.Path;
 
 /**
@@ -25,28 +24,28 @@ import java.nio.file.Path;
  *
  * @author Bernd Michaely (info@bernd-michaely.de)
  */
-public sealed interface PathView permits DirectoryEntry
+public interface PathView
 {
-  /**
-   * Returns the encapsulated path.
-   *
-   * @return the encapsulated path
-   */
-  Path getPath();
+	/**
+	 * Returns the encapsulated path.
+	 *
+	 * @return the encapsulated path
+	 */
+	Path getPath();
 
-  /**
-   * Returns a name for this path. This is the name of the last element of the
-   * path or the root name, if the path has no name elements, or the empty
-   * String, if the path has also no root name.
-   *
-   * @return a name for this path
-   */
-  String getName();
+	/**
+	 * Returns a name for this path. This is the name of the last element of the
+	 * path or the root name, if the path has no name elements, or the empty
+	 * String, if the path has also no root name.
+	 *
+	 * @return a name for this path
+	 */
+	String getName();
 
-  /**
-   * Notifies the file system tree about the node being expanded or collapsed.
-   *
-   * @param expand true, if the node has been expanded, false, if collapsed
-   */
-  public abstract void handleNodeExpansion(boolean expand);
+	/**
+	 * Notifies the file system tree about the node being expanded or collapsed.
+	 *
+	 * @param expand true, if the node has been expanded, false, if collapsed
+	 */
+	public abstract void handleNodeExpansion(boolean expand);
 }

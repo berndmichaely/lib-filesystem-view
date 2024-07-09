@@ -4,12 +4,19 @@ package de.bernd_michaely.common.filesystem.view.fx;
 import de.bernd_michaely.common.filesystem.view.base.NodeView;
 import de.bernd_michaely.common.filesystem.view.base.PathView;
 import java.lang.System.Logger;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import static java.lang.System.Logger.Level.*;
 
@@ -22,6 +29,9 @@ class NodeViewFX implements NodeView
 {
 	private static final Logger logger = System.getLogger(NodeViewFX.class.getName());
 	private final TreeNode treeItem;
+	private @Nullable ScheduledExecutorService executorService;
+	private @Nullable ScheduledFuture<?> scheduledFuture;
+	private volatile boolean isRead;
 
 	private static class TreeNode extends TreeItem<PathView>
 	{
@@ -66,9 +76,15 @@ class NodeViewFX implements NodeView
 	@Override
 	public void insertSubNodes(SortedMap<Integer, NodeView> mapSubNodeViews)
 	{
-		Platform.runLater(() ->
+		final Runnable action = () ->
 		{
+			isRead = true;
+			if (scheduledFuture != null)
+			{
+				scheduledFuture.cancel(true);
+			}
 			final ObservableList<TreeItem<PathView>> children = treeItem.getChildren();
+			children.clear();
 			mapSubNodeViews.forEach((index, subNodeView) ->
 			{
 				if (subNodeView instanceof NodeViewFX subNodeViewFX)
@@ -81,26 +97,50 @@ class NodeViewFX implements NodeView
 						"::insertSubNodeAt : Invalid NodeView : " + subNodeView);
 				}
 			});
-		});
+		};
+		if (Platform.isFxApplicationThread())
+		{
+			action.run();
+		}
+		else
+		{
+			Platform.runLater(action);
+		}
 	}
 
 	@Override
 	public void addAllSubNodes(Collection<NodeView> subNodeViews)
 	{
-		Platform.runLater(() ->
-			treeItem.getChildren().addAll(
+		final Runnable action = () ->
+		{
+			isRead = true;
+			if (scheduledFuture != null)
+			{
+				scheduledFuture.cancel(true);
+			}
+			treeItem.getChildren().setAll(
 				subNodeViews.stream()
 					.filter(subNodeView -> subNodeView instanceof NodeViewFX)
 					.map(subNodeViewFX -> (NodeViewFX) subNodeViewFX)
 					.map(NodeViewFX::getTreeItem)
-					.toList()));
+					.toList());
+		};
+		if (Platform.isFxApplicationThread())
+		{
+			action.run();
+		}
+		else
+		{
+			Platform.runLater(action);
+		}
 	}
 
 	@Override
 	public void removeSubNodes(List<Integer> indices)
 	{
-		Platform.runLater(() ->
+		final Runnable action = () ->
 		{
+			isRead = false;
 			final ObservableList<TreeItem<PathView>> children = treeItem.getChildren();
 			indices.forEach(index ->
 			{
@@ -109,18 +149,89 @@ class NodeViewFX implements NodeView
 					children.remove((int) index);
 				}
 			});
-		});
+		};
+		if (Platform.isFxApplicationThread())
+		{
+			action.run();
+		}
+		else
+		{
+			Platform.runLater(action);
+		}
 	}
 
 	@Override
 	public void clear()
 	{
-		Platform.runLater(() -> treeItem.getChildren().clear());
+		final Runnable action = () ->
+		{
+			isRead = false;
+			treeItem.getChildren().clear();
+		};
+		if (Platform.isFxApplicationThread())
+		{
+			action.run();
+		}
+		else
+		{
+			Platform.runLater(action);
+		}
+	}
+
+	private static class ProgressPathView implements PathView
+	{
+		@Override
+		public String getName()
+		{
+			return "";
+		}
+
+		@Override
+		public Path getPath()
+		{
+			return Paths.get("");
+		}
+
+		@Override
+		public void handleNodeExpansion(boolean expand)
+		{
+		}
+
+		@Override
+		public String toString()
+		{
+			return "";
+		}
 	}
 
 	@Override
 	public void setExpanded(boolean expanded)
 	{
-		Platform.runLater(() -> treeItem.setExpanded(expanded));
+		final Runnable action = () -> treeItem.setExpanded(expanded);
+		if (Platform.isFxApplicationThread())
+		{
+			action.run();
+			if (executorService == null)
+			{
+				executorService = Executors.newSingleThreadScheduledExecutor();
+				scheduledFuture = executorService.schedule(() ->
+				{
+					if (!isRead)
+					{
+//						@SuppressWarnings("type.arguments.not.inferred")
+						final TreeItem<PathView> treeItem1 = new TreeItem<>(
+							new ProgressPathView(), new ProgressIndicator());
+						if (scheduledFuture != null && !scheduledFuture.isCancelled())
+						{
+							treeItem.getChildren().add(treeItem1);
+						}
+					}
+				}, 500, TimeUnit.MILLISECONDS);
+			}
+		}
+		else
+		{
+			Platform.runLater(action);
+		}
 	}
 }
