@@ -3,20 +3,32 @@ plugins {
 	id 'org.openjfx.javafxplugin' version '0.1.0'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.42' apply false
+	id 'org.checkerframework' version '0.6.44' apply false
 }
 
 apply plugin: 'org.checkerframework'
 
 wrapper {
-	gradleVersion '8.6'
+	gradleVersion '8.7'
+}
+
+final def javaLangVersion = JavaLanguageVersion.of(17)
+final def javaSrcVersion = JavaVersion.VERSION_17
+
+java {
+	toolchain {
+		languageVersion = javaLangVersion
+	}
+	sourceCompatibility = javaSrcVersion
+	withJavadocJar()
+	withSourcesJar()
 }
 
 group = 'de.bernd_michaely'
 version = '0.9.4'
 
 ext.versionJUnit = '5.9.2'
-ext.versionCheckerFramework = '3.45.0'
+ext.versionCheckerFramework = '3.47.0'
 
 jacoco {
 	toolVersion = '0.8.10'
@@ -24,14 +36,8 @@ jacoco {
 
 final def deactivateCheckerFramework = false
 
-java {
-	sourceCompatibility = JavaVersion.VERSION_17
-	withJavadocJar()
-	withSourcesJar()
-}
-
 javafx {
-	version = "21.0.3"
+	version = "21.0.4"
 	modules = [ 'javafx.controls' ]
 	configurations = [ 'implementation', 'testImplementation']
 }
@@ -67,6 +73,7 @@ dependencies {
 	
 tasks.named('test') {
 	logger.lifecycle "=> Configuring task »$name« for JUnit"
+	systemProperty 'java.util.logging.config.file', file('src/test/java/logging.properties')
 	// Use JUnit Platform for unit tests.
 	useJUnitPlatform()
 	logger.lifecycle "   -> JVM args : $jvmArgs"
