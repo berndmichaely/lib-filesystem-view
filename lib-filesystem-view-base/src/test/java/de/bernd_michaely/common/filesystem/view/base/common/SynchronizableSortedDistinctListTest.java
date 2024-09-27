@@ -26,12 +26,16 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
+import java.util.Spliterator;
 import java.util.TreeSet;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.*;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.teeing;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -74,7 +78,7 @@ public class SynchronizableSortedDistinctListTest
 	{
 		final var comparator = ((Comparator<Integer>) Integer::compareTo).reversed();
 		final var list = new SynchronizableSortedDistinctList<>(comparator);
-		assertEquals(comparator, list.getComparator());
+		assertEquals(comparator, list.comparator());
 		assertTrue(list.isEmpty());
 		assertEquals(0, list.size());
 		assertTrue(list.add(2));
@@ -90,7 +94,7 @@ public class SynchronizableSortedDistinctListTest
 		assertIterableEquals(List.of(9, 8, 7, 6, 5, 4, 3, 2, 1), list);
 		final var listNaturalOrdering = new SynchronizableSortedDistinctList<String>(
 			(Comparator<String>) null);
-		assertNull(listNaturalOrdering.getComparator());
+		assertNull(listNaturalOrdering.comparator());
 		listNaturalOrdering.add("b");
 		listNaturalOrdering.add("a");
 		listNaturalOrdering.add("b");
@@ -279,16 +283,56 @@ public class SynchronizableSortedDistinctListTest
 		assertTrue(list1_rev.equals(ssdl1_rev));
 	}
 
-	@Test
-	public void testStream()
-	{
-		assertIterableEquals(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9),
-			new SynchronizableSortedDistinctList<>(
-				List.of(9, 5, 1, 7, 5, 3, 8, 5, 2, 6, 5, 4)).stream().toList());
+	private record Lists(List<Integer> list1, List<Integer> list2)
+		{
+		/**
+		 * Create lists with values [1..size] and [size..1].
+		 *
+		 * @param size number of list elements to create
+		 * @return a new instance with filled lists
+		 */
+		private static Lists create(int size)
+		{
+			return IntStream.range(0, size).mapToObj(Integer::valueOf)
+				.collect(teeing(
+					mapping(i -> i + 1, toList()),
+					mapping(i -> size - i, toList()),
+					Lists::new));
+		}
 	}
 
 	@Test
-	void testNullItem()
+	public void testSpliterator()
+	{
+		final int n = 1_000_000;
+		final var lists = Lists.create(n);
+		final var synchList = new SynchronizableSortedDistinctList<>(Integer::compare);
+		synchList.addAll(lists.list2());
+		final var spliterator = synchList.spliterator();
+		assertTrue(spliterator.hasCharacteristics(Spliterator.DISTINCT),
+			"spliterator characteristics: DISTINCT");
+		assertTrue(spliterator.hasCharacteristics(Spliterator.ORDERED),
+			"spliterator characteristics: ORDERED");
+		assertTrue(spliterator.hasCharacteristics(Spliterator.SIZED),
+			"spliterator characteristics: SIZED");
+		assertTrue(spliterator.hasCharacteristics(Spliterator.SORTED),
+			"spliterator characteristics: SORTED");
+		final List<Integer> list = new ArrayList<>(n);
+		spliterator.forEachRemaining(list::add);
+		assertIterableEquals(lists.list1(), list);
+		assertEquals(synchList.comparator(), spliterator.getComparator());
+	}
+
+	@Test
+	public void testStream()
+	{
+		final var lists = Lists.create(1_000_000);
+		assertIterableEquals(lists.list1(),
+			new SynchronizableSortedDistinctList<>(lists.list2()).stream().toList());
+	}
+
+	@Test
+	public void testNullItem()
 	{
 		final List<Integer> listExpNullFirst = unmodifiableList(asList(null, 1));
 		final List<Integer> listExpNullLast = unmodifiableList(asList(1, null));
@@ -427,7 +471,7 @@ public class SynchronizableSortedDistinctListTest
 		List<? extends T> lastItems;
 
 		@Override
-		public void accept(Collection<T> collection)
+		public void accept(List<T> collection)
 		{
 			inc();
 			lastItems = List.copyOf(collection);
@@ -629,7 +673,7 @@ public class SynchronizableSortedDistinctListTest
 			private boolean exceptionThrown;
 
 			@Override
-			public void accept(Collection<String> collection)
+			public void accept(List<String> collection)
 			{
 				try
 				{
@@ -741,7 +785,7 @@ public class SynchronizableSortedDistinctListTest
 	}
 
 	@Test
-	void testSubList()
+	public void testSubList()
 	{
 		final var list = new SynchronizableSortedDistinctList<>(List.of("c", "i", "a", "g", "e"));
 		assertEquals(List.of("a", "c", "e", "g", "i"), list);
@@ -758,4 +802,30 @@ public class SynchronizableSortedDistinctListTest
 		assertEquals(List.of(), subList);
 		assertEquals(List.of("a", "i"), list);
 	}
+//
+//	@Test
+//	public void testSubSetEmpty()
+//	{
+//		final var listEmpty = new SynchronizableSortedDistinctList<Integer>();
+//		final var nsee = NoSuchElementException.class;
+//		final var iae = IllegalArgumentException.class;
+//		assertThrows(nsee, () -> listEmpty.first());
+//		assertThrows(nsee, () -> listEmpty.last());
+//		assertThrows(iae, () -> listEmpty.subSet(2, 1));
+////		final SortedSet<Integer> subSet = listEmpty.subSet(11, 21);
+////		assertEquals(List.of(), subSet.headSet(11));
+////		assertEquals(List.of(), subSet.tailSet(11));
+//	}
+//
+//	@Test
+//	public void testSubSetNonEmpty()
+//	{
+//		final var list = new SynchronizableSortedDistinctList<Integer>(
+//			List.of(1, 2, 3, 7, 11, 15, 21, 22, 23));
+//		final SortedSet<Integer> subSet = list.subSet(11, 21);
+//		assertEquals(11, subSet.first());
+//		assertEquals(21, subSet.last());
+////		assertEquals(List.of(1, 2, 3, 7, 11), subSet.headSet(11));
+////		assertEquals(List.of(11, 15, 21, 22, 23), subSet.tailSet(11));
+//	}
 }

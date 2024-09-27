@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.RandomAccess;
 import java.util.SortedSet;
+import java.util.Spliterator;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -43,7 +44,7 @@ import static java.util.Collections.unmodifiableSortedSet;
  * @param <T> the type of list items
  */
 public class SynchronizableSortedDistinctList<T> extends AbstractList<T>
-	implements RandomAccess
+	implements RandomAccess //, NavigableSet<T>
 {
 	private final @Nullable Comparator<? super T> comparator;
 	private final SortedSet<T> emptySortedSet;
@@ -84,7 +85,7 @@ public class SynchronizableSortedDistinctList<T> extends AbstractList<T>
 	 *
 	 * @param <T> the type of elements
 	 */
-	public interface ItemsClearHandler<T> extends Consumer<Collection<T>>
+	public interface ItemsClearHandler<T> extends Consumer<List<T>>
 	{
 	}
 
@@ -138,7 +139,9 @@ public class SynchronizableSortedDistinctList<T> extends AbstractList<T>
 	 * Returns the configured comparator.
 	 *
 	 * @return the configured comparator (may be null for the natural ordering)
+	 * @deprecated use {@link #comparator()} instead
 	 */
+	@Deprecated
 	public @Nullable
 	Comparator<? super T> getComparator()
 	{
@@ -407,6 +410,21 @@ public class SynchronizableSortedDistinctList<T> extends AbstractList<T>
 		return wasPresent;
 	}
 
+	@Override
+	public boolean remove(Object object)
+	{
+		try
+		{
+			@SuppressWarnings("unchecked")
+			final T item = (T) object;
+			return removeItem(item);
+		}
+		catch (ClassCastException ex)
+		{
+			return false;
+		}
+	}
+
 	private void removeAt(@UnknownInitialization(SynchronizableSortedDistinctList.class)
 		SynchronizableSortedDistinctList<T> this,
 		int index)
@@ -520,9 +538,10 @@ public class SynchronizableSortedDistinctList<T> extends AbstractList<T>
 			}
 			else
 			{
+				final int n = list.size();
 				// remove items, which are not present any more, in descending order:
 				final List<Integer> listRemove = unmodifiableList(IntStream
-					.iterate(list.size() - 1, i -> i >= 0, i -> i - 1)
+					.iterate(n - 1, i -> i >= 0, i -> i - 1)
 					.filter(i ->
 					{
 						try
@@ -539,15 +558,87 @@ public class SynchronizableSortedDistinctList<T> extends AbstractList<T>
 					})
 					.mapToObj(Integer::valueOf).toList());
 				final boolean hasDeletions = !listRemove.isEmpty();
-				if (hasDeletions && onItemsRemove != null)
+				if (listRemove.size() == n)
 				{
-					onItemsRemove.accept(listRemove);
+					if (onItemsClear != null)
+					{
+						onItemsClear.accept(listView);
+					}
+					list.clear();
 				}
-				listRemove.forEach(i -> list.remove((int) i));
+				else if (hasDeletions)
+				{
+					if (onItemsRemove != null)
+					{
+						onItemsRemove.accept(listRemove);
+					}
+					listRemove.forEach(i -> list.remove((int) i));
+				}
 				// add new items in ascending order:
 				final boolean hasNewItems = addNewItems(currentItems);
 				return hasDeletions || hasNewItems;
 			}
 		}
+	}
+
+	/**
+	 * Returns the configured comparator.
+	 *
+	 * @return the configured comparator (may be null for the natural ordering)
+	 */
+//	@Override
+	public @Nullable
+	Comparator<? super T> comparator()
+	{
+		return comparator;
+	}
+//
+//	@SuppressWarnings("unchecked")
+//	private int compare(T item1, T item2)
+//	{
+//		return comparator() != null ? comparator().compare(item1, item2) :
+//			((Comparable<? super T>) item1).compareTo(item2);
+//	}
+//
+
+	@Override
+	public Spliterator<T> spliterator()
+	{
+		final var randomAccessSpliterator = super.spliterator();
+		return new Spliterator<T>()
+		{
+			@Override
+			public int characteristics()
+			{
+				return randomAccessSpliterator.characteristics() |
+					Spliterator.DISTINCT | Spliterator.SORTED;
+			}
+
+			@Override
+			public long estimateSize()
+			{
+				return randomAccessSpliterator.estimateSize();
+			}
+
+			@Override
+			public boolean tryAdvance(Consumer<? super T> action)
+			{
+				return randomAccessSpliterator.tryAdvance(action);
+			}
+
+			@Override
+			public @Nullable
+			Spliterator<T> trySplit()
+			{
+				return randomAccessSpliterator.trySplit();
+			}
+
+			@Override
+			public @Nullable
+			Comparator<? super T> getComparator()
+			{
+				return SynchronizableSortedDistinctList.this.comparator();
+			}
+		};
 	}
 }
