@@ -56,58 +56,60 @@ In this case, the component will call the `setUpdateNotifier(Runnable callback)`
 
 #### Listing
 
-    public interface UserNodeConfiguration
+```java
+public interface UserNodeConfiguration
+{
+  LinkOption[] DEFAULT_LINK_OPTIONS = new LinkOption[0];
+
+  default LinkOption[] getLinkOptions()
+  {
+    return DEFAULT_LINK_OPTIONS;
+  }
+
+  default boolean isCreatingNodeForDirectory(Path directory)
+  {
+    try
     {
-      LinkOption[] DEFAULT_LINK_OPTIONS = new LinkOption[0];
-
-      default LinkOption[] getLinkOptions()
-      {
-        return DEFAULT_LINK_OPTIONS;
-      }
-
-      default boolean isCreatingNodeForDirectory(Path directory)
-      {
-        try
-        {
-          return !Files.isHidden(directory);
-        }
-        catch (IOException ex)
-        {
-          return false;
-        }
-      }
-
-      default boolean isCreatingNodeForFile(Path file)
-      {
-        return false;
-      }
-
-      default @Nullable
-      FileSystem createFileSystemFor(Path file)
-      {
-        return null;
-      }
-
-      default void onClosingFileSystem(FileSystem fileSystem)
-      {
-      }
-
-      default boolean isLeafNode(Path path)
-      {
-        return false;
-      }
-
-      default boolean isRequestingUpdateNotifier()
-      {
-        return false;
-      }
-
-      default void setUpdateNotifier(Runnable callback)
-      {
-      }
-
-      UserNodeConfiguration getUserNodeConfigurationFor(Path path);
+      return !Files.isHidden(directory);
     }
+    catch (IOException ex)
+    {
+      return false;
+    }
+  }
+
+  default boolean isCreatingNodeForFile(Path file)
+  {
+    return false;
+  }
+
+  default @Nullable
+  FileSystem createFileSystemFor(Path file)
+  {
+    return null;
+  }
+
+  default void onClosingFileSystem(FileSystem fileSystem)
+  {
+  }
+
+  default boolean isLeafNode(Path path)
+  {
+    return false;
+  }
+
+  default boolean isRequestingUpdateNotifier()
+  {
+    return false;
+  }
+
+  default void setUpdateNotifier(Runnable callback)
+  {
+  }
+
+  UserNodeConfiguration getUserNodeConfigurationFor(Path path);
+}
+```
 
 ### The SimpleUserNodeConfiguration class
 
