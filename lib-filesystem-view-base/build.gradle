@@ -2,7 +2,7 @@ plugins {
 	id 'java-library'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.59' apply false
+	id 'org.checkerframework' version '0.6.60' apply false
 }
 
 apply plugin: 'org.checkerframework'
@@ -30,8 +30,8 @@ tasks.withType(JavaExec).configureEach {
 }
 
 group = 'de.bernd_michaely'
-//version = '0.9.5'
-version = '0.9.5-snapshot'
+version = '0.9.5'
+//version = '0.9.5-snapshot'
 
 final def regexSemVer = ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 if (!(version =~ regexSemVer)) throw new StopExecutionException("Invalid semantic version »${version}«")
@@ -57,7 +57,7 @@ logger.lifecycle "==> Root project »$name ($version)«"
 logger.lifecycle " -> Base dir is »${file('.')}«"
 logger.lifecycle " -> Using »JUnit $versionJUnit«"
 logger.lifecycle " -> Using »JaCoCo ${jacoco.toolVersion}«"
-logger.lifecycle "    -> Checker Framework is ${deactivateCheckerFramework ? 'DEACTIVATED!' : 'active.'}"
+logger.lifecycle " -> Checker Framework is ${deactivateCheckerFramework ? 'DEACTIVATED!' : 'active.'}"
 logger.lifecycle " -> Included child projects : »${childProjects.keySet()}«"
 logger.lifecycle " -> Maven coordinates »${group}:${name}:${version}«"
 
@@ -83,8 +83,8 @@ task getVersionShield {
 	group = javadoc.group
 	final def toShieldParam = { it replaceAll '-', '--' replaceAll '_', '__' replaceAll '\\s', '_'  }
 	doLast {
-		final String label = toShieldParam rootProject.name
-		final String message = toShieldParam (semVer - ~/\+.*$/)
+		final String label = toShieldParam nameLib
+		final String message = toShieldParam (version - ~/\+.*$/)
 		final String color = 'blue'
 		final def url = new URI("https://img.shields.io/badge/${label}-${message}-${color}").toURL()
 		logger.lifecycle "→ getting data from URL »${url}«"

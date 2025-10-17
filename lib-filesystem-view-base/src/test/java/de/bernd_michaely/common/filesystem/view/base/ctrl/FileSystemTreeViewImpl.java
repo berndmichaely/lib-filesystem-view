@@ -32,104 +32,113 @@ import java.util.SortedSet;
  */
 class FileSystemTreeViewImpl implements IFileSystemTreeView
 {
-  private final RootNodeCtrl rootNodeCtrl;
-  private Path selectedPath;
-  private final Configuration configuration;
+	private final RootNodeCtrl rootNodeCtrl;
+	private Path selectedPath;
+	private final Configuration configuration;
 
-  FileSystemTreeViewImpl(Configuration configuration)
-  {
-    this.rootNodeCtrl = RootNodeCtrl.create(configuration, NodeViewImpl::new);
-    this.configuration = configuration;
-  }
+	FileSystemTreeViewImpl(Configuration configuration)
+	{
+		this.rootNodeCtrl = RootNodeCtrl.create(configuration, NodeViewImpl::new);
+		this.configuration = configuration;
+	}
 
-  @Override
-  public Path expandPath(Path absolutePath, boolean expandLastElement, boolean select)
-  {
-    if (absolutePath != null)
-    {
-      if (rootNodeCtrl.expandPath(absolutePath, expandLastElement) instanceof NodeViewImpl nodeView)
-      {
-        final Path path = nodeView.getPathView().getPath();
-        if (select)
-        {
-          selectedPath = path;
-        }
-        return path;
-      }
-      else
-      {
-        return null;
-      }
-    }
-    else
-    {
-      if (select)
-      {
-        clearSelection();
-      }
-      return null;
-    }
-  }
+	@Override
+	public Path expandPath(Path absolutePath, boolean expandLastElement, boolean select)
+	{
+		if (absolutePath != null)
+		{
+			if (rootNodeCtrl.expandPath(absolutePath, expandLastElement) instanceof NodeViewImpl nodeView)
+			{
+				final Path path = nodeView.getPathView().getPath();
+				if (select)
+				{
+					selectedPath = path;
+				}
+				return path;
+			}
+			else
+			{
+				return null;
+			}
+		}
+		else
+		{
+			if (select)
+			{
+				clearSelection();
+			}
+			return null;
+		}
+	}
 
-  @Override
-  public void clearSelection()
-  {
-    selectedPath = null;
-  }
+	@Override
+	public void clearSelection()
+	{
+		selectedPath = null;
+	}
 
-  @Override
-  public SortedSet<Path> getExpandedPaths()
-  {
-    return rootNodeCtrl.getExpandedPaths();
-  }
+	@Override
+	public SortedSet<Path> getExpandedPaths()
+	{
+		return rootNodeCtrl.getExpandedPaths();
+	}
 
-  @Override
-  public Path getSelectedPath()
-  {
-    return selectedPath;
-  }
+	@Override
+	public Path getSelectedPath()
+	{
+		return selectedPath;
+	}
 
-  @Override
-  public void updateTree()
-  {
-    rootNodeCtrl.updateTree();
-  }
+	@Override
+	public void updateTree()
+	{
+		rootNodeCtrl.updateTree();
+	}
 
-  @Override
-  public void close() throws IOException
-  {
-    rootNodeCtrl.close();
-  }
-  //
-  // Unit-Test specific, package local methods:
-  //
+	@Override
+	public void close() throws IOException
+	{
+		rootNodeCtrl.close();
+	}
+	//
+	// Unit-Test specific, package local methods:
+	//
 
-  List<NodeViewImpl> getSubNodes()
-  {
-    final var rootNodeView = (NodeViewImpl) rootNodeCtrl.getNodeView();
-    return rootNodeView.getSubNodes().stream().map(nv -> ((NodeViewImpl) nv)).toList();
-  }
+	List<NodeViewImpl> getSubNodes()
+	{
+		return getRootNodeView().getSubNodes().stream().map(nv -> ((NodeViewImpl) nv)).toList();
+	}
 
-  List<String> getEntryNames()
-  {
-    return getSubNodes().stream()
-      .map(NodeViewImpl::getPathView).map(PathView::getName).toList();
-  }
+	RootNodeCtrl getRootNodeCtrl()
+	{
+		return rootNodeCtrl;
+	}
 
-  /**
-   * Calls
-   * {@link RootNodeCtrl#expandPath(Path, boolean) RootNodeCtrl#expandPath(path, false)}.
-   *
-   * @param path the path to expand
-   * @return the unit test specific implementation of the {@link NodeView}
-   */
-  NodeViewImpl _expandPath(Path path)
-  {
-    return (NodeViewImpl) rootNodeCtrl.expandPath(path, false);
-  }
+	NodeViewImpl getRootNodeView()
+	{
+		return (NodeViewImpl) rootNodeCtrl.getNodeView();
+	}
 
-  Configuration getConfiguration()
-  {
-    return configuration;
-  }
+	List<String> getEntryNames()
+	{
+		return getSubNodes().stream()
+			.map(NodeViewImpl::getPathView).map(PathView::getName).toList();
+	}
+
+	/**
+	 * Calls
+	 * {@link RootNodeCtrl#expandPath(Path, boolean) RootNodeCtrl#expandPath(path, false)}.
+	 *
+	 * @param path the path to expand
+	 * @return the unit test specific implementation of the {@link NodeView}
+	 */
+	NodeViewImpl _expandPath(Path path)
+	{
+		return (NodeViewImpl) rootNodeCtrl.expandPath(path, false);
+	}
+
+	Configuration getConfiguration()
+	{
+		return configuration;
+	}
 }

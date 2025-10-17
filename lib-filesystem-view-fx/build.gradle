@@ -3,7 +3,7 @@ plugins {
 	id 'org.openjfx.javafxplugin' version '0.1.0'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.55' apply false
+	id 'org.checkerframework' version '0.6.60' apply false
 }
 
 apply plugin: 'org.checkerframework'
@@ -13,25 +13,31 @@ wrapper {
 }
 
 final def javaLangVersion = JavaLanguageVersion.of(17)
-final def javaSrcVersion = JavaVersion.VERSION_17
+final def jvmVendor = JvmVendorSpec.ADOPTIUM
 
 java {
 	toolchain {
 		languageVersion = javaLangVersion
+		vendor = jvmVendor
 	}
-	sourceCompatibility = javaSrcVersion
 	withJavadocJar()
 	withSourcesJar()
 }
+tasks.withType(JavaExec).configureEach {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = javaLangVersion
+		vendor = jvmVendor
+	}
+}
 
 group = 'de.bernd_michaely'
-//version = '0.9.5'
-version = '0.9.5-snapshot'
+version = '0.9.5'
+//version = '0.9.5-snapshot'
 
 final def regexSemVer = ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 if (!(version =~ regexSemVer)) throw new StopExecutionException("Invalid semantic version »${version}«")
 
-ext.versionJUnit = '5.9.2'
+ext.versionJUnit = '5.13.4'
 ext.versionCheckerFramework = '3.49.4'
 
 jacoco {
@@ -41,7 +47,7 @@ jacoco {
 final def deactivateCheckerFramework = false
 
 javafx {
-	version = "21.0.4"
+	version = "21.0.8"
 	modules = [ 'javafx.controls' ]
 	configurations = [ 'implementation', 'testImplementation']
 }
@@ -55,8 +61,7 @@ logger.lifecycle "==> Root project »$name ($version)«"
 logger.lifecycle " -> Base dir is »${file('.')}«"
 logger.lifecycle " -> Using »JUnit $versionJUnit«"
 logger.lifecycle " -> Using »JaCoCo ${jacoco.toolVersion}«"
-logger.lifecycle " -> Using »Checker Framework $versionCheckerFramework«"
-logger.lifecycle "    -> Checker Framework is ${deactivateCheckerFramework ? 'DEACTIVATED!' : 'active.'}"
+logger.lifecycle " -> Checker Framework is ${deactivateCheckerFramework ? 'DEACTIVATED!' : 'active.'}"
 logger.lifecycle " -> Using »JavaFX ${javafx.version}«"
 logger.lifecycle " -> Included child projects : »${childProjects.keySet()}«"
 logger.lifecycle " -> Maven coordinates »${group}:${name}:${version}«"
@@ -67,12 +72,6 @@ repositories {
 
 dependencies {
 	implementation "de.bernd_michaely:common-filesystem-view-base:${version}"
-	
-	// Checker Framework:
-	// https://checkerframework.org
-	// https://github.com/kelloggm/checkerframework-gradle-plugin
-  implementation "org.checkerframework:checker-qual:$versionCheckerFramework"
-  checkerFramework "org.checkerframework:checker:$versionCheckerFramework"
 }
 	
 tasks.named('test') {
@@ -128,12 +127,17 @@ javadoc {
 	def headerPrefix = '<div style="margin-top:14px;"><strong>'
 	def headerPostfix = '</strong></div>'
 	def header = headerPrefix + project.name + " (" + project.version + ')' + headerPostfix
-	def _versionJavaFxMain = (javafx.version =~ /^\d+/)[0]
-	def _versionJavaFxLTSMain = 21
-	def versionJavaFx = _versionJavaFxLTSMain
+	def javafxVer
+	final def m = javafx.version =~ /(\d+)(\.\d+(\.\d+)?)?(-.+)?(\+.+)?/
+	if (m) {
+		javafxVer = m.group(1)
+		logger.lifecycle " -> JavaFX major version is ${javafxVer}"
+	} else {
+		throw new StopExecutionException("Can't get JavaFX major version.")
+	}
 	options.header header
-	options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility.getMajorVersion()}/docs/api"
-	options.links "https://openjfx.io/javadoc/${versionJavaFx}/"
+	options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility}/docs/api"
+	options.links "https://openjfx.io/javadoc/${javafxVer}/"
 	options.links 'https://checkerframework.org/api'
 	options.windowTitle project.version
 	options.use true

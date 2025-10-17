@@ -26,6 +26,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -74,6 +75,7 @@ public class NodeCtrlTest
 	private static final String FILENAME_TXT_1 = "test1.txt";
 	private static final String DIR0 = "unit_tests";
 	private static final String DIR1 = "my_user";
+
 	private static class UserNodeConfigurationHiddenDirs implements UserNodeConfiguration
 	{
 		private static UserNodeConfiguration instance = new UserNodeConfigurationHiddenDirs();
@@ -179,6 +181,7 @@ public class NodeCtrlTest
 				.setRequestingWatchService(false)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertEquals(List.of("A:\\", "C:\\", "D:\\", "R:\\", "U:\\", "V:\\", "W:\\"),
 					fstv.getEntryNames());
 				assertFalse(fstv.isPathSelected());
@@ -208,6 +211,7 @@ public class NodeCtrlTest
 				.setRequestingWatchService(false)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertEquals(List.of("/"), fstv.getEntryNames());
 				assertFalse(fstv.isPathSelected());
 				final Path selectedPath = fstv.expandPath(fs.getPath("/"), false, true);
@@ -229,6 +233,7 @@ public class NodeCtrlTest
 				.setRequestingWatchService(false)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertFalse(fstv.isPathSelected());
 				assertNull(fstv.getSelectedPath());
 				// select
@@ -331,6 +336,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(userNodeConfiguration)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertFalse(fstv.isPathSelected());
 				assertNull(fstv.getSelectedPath());
 				assertEquals(path, fstv.expandPath(path, false, true));
@@ -432,6 +438,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(userNodeConfiguration)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertFalse(fstv.isPathSelected());
 				assertNull(fstv.getSelectedPath());
 				// open 3 nested zip filesystems:
@@ -522,6 +529,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(userNodeConfiguration)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertNotEquals(mainFileSystem, userNodeConfiguration.jimFileSystem);
 				assertNotEquals(FileSystems.getDefault(), userNodeConfiguration.jimFileSystem);
 				assertFalse(fstv.isPathSelected());
@@ -561,6 +569,7 @@ public class NodeCtrlTest
 					.setFileNameComparator(testConfiguration.comparator())
 					.build()))
 				{
+					assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 					fstv.expandPath(mainFileSystem.getPath("/", "a"), false, true);
 					final List<String> expected = testConfiguration.expectedResult();
 					final List<String> actual = fstv.getSubNodes().get(0).getSubNodes().stream()
@@ -579,7 +588,7 @@ public class NodeCtrlTest
 
 	enum EntryType
 	{
-		FILE, DIRECTORY
+		DIRECTORY, FILE, ROOT
 	}
 
 	/**
@@ -613,16 +622,36 @@ public class NodeCtrlTest
 		});
 		try
 		{
-			final BooleanSupplier checkEntryExists = () -> entryType.equals(FILE) ?
-				Files.isRegularFile(subPath) : Files.isDirectory(subPath);
+			final BooleanSupplier checkEntryExists = () ->
+			{
+				boolean result = false;
+				switch (entryType)
+				{
+					case DIRECTORY -> result = Files.isDirectory(subPath);
+					case FILE -> result = Files.isRegularFile(subPath);
+					case ROOT ->
+					{
+						for (Path rootDirectory : subPath.getFileSystem().getRootDirectories())
+						{
+							if (subPath.equals(rootDirectory))
+							{
+								result = true;
+							}
+						}
+					}
+					default -> throw new AssertionError("Invalid EntryType");
+				}
+				return result;
+			};
 			if (watchAction.equals(ADDED))
 			{
 				assertFalse(checkEntryExists);
 				switch (entryType)
 				{
-					case DIRECTORY ->
-						assertEquals(subPath, Files.createDirectory(subPath));
+					case DIRECTORY -> assertEquals(subPath, Files.createDirectory(subPath));
 					case FILE -> assertEquals(subPath, Files.createFile(subPath));
+					case ROOT -> assertTrue(((ModifiableRootsFileSystem) subPath.getFileSystem())
+							.getModifiableRoots().add(subPath));
 					default -> throw new AssertionError("Invalid EntryType");
 				}
 				assertTrue(checkEntryExists);
@@ -630,7 +659,13 @@ public class NodeCtrlTest
 			else
 			{
 				assertTrue(checkEntryExists);
-				Files.delete(subPath);
+				switch (entryType)
+				{
+					case DIRECTORY, FILE -> Files.delete(subPath);
+					case ROOT -> assertTrue(((ModifiableRootsFileSystem) subPath.getFileSystem())
+							.getModifiableRoots().remove(subPath));
+					default -> throw new AssertionError("Invalid EntryType");
+				}
 				assertFalse(checkEntryExists);
 			}
 			// wait for subdirectory changes
@@ -681,7 +716,8 @@ public class NodeCtrlTest
 		}
 	}
 
-	private void testWatchService(Path tempDirectoryBase, long waitTime) throws IOException
+	private void testWatchService(Path tempDirectoryBase, long waitTime,
+		Boolean isWatchingFileSystemRoots) throws IOException
 	{
 		final Path subDir1 = tempDirectoryBase.resolve("subdir1");
 		final Path subDir2 = tempDirectoryBase.resolve("subdir2");
@@ -698,6 +734,10 @@ public class NodeCtrlTest
 				final NodeViewImpl nodeView = fstv._expandPath(tempDirectoryBase);
 				final var watchServiceCtrl = nodeView.getWatchServiceCtrl();
 				assertTrue(watchServiceCtrl.isInUse());
+				if (isWatchingFileSystemRoots != null)
+				{
+					assertEquals(isWatchingFileSystemRoots, fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
+				}
 				assertFalse(watchServiceCtrl.isPathWatched(tempDirectoryBase));
 				nodeView.setExpanded(true);
 				assertTrue(watchServiceCtrl.isPathWatched(tempDirectoryBase));
@@ -729,7 +769,7 @@ public class NodeCtrlTest
 	public void testWatchServiceDefaultFs() throws IOException
 	{
 		testWatchService(Files.createTempDirectory(System.getProperty("user.name") +
-			"~" + getClass().getSimpleName() + "_"), WAIT_TIME_MILLISECONDS);
+			"~" + getClass().getSimpleName() + "_"), WAIT_TIME_MILLISECONDS, null);
 	}
 
 	@Test
@@ -737,7 +777,7 @@ public class NodeCtrlTest
 	{
 		try (final var fileSystem = createUnixFileSystem())
 		{
-			testWatchService(fileSystem.getPath("/", "a", "b", "c"), 0);
+			testWatchService(fileSystem.getPath("/", "a", "b", "c"), 0, false);
 		}
 	}
 
@@ -746,7 +786,7 @@ public class NodeCtrlTest
 	{
 		try (final var fileSystem = createWindowsFileSystem())
 		{
-			testWatchService(fileSystem.getPath("D:", "a", "b", "c"), 0);
+			testWatchService(fileSystem.getPath("D:", "a", "b", "c"), 0, true);
 		}
 	}
 
@@ -824,6 +864,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(userNodeConfiguration)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				// expand a path:
 				fstv.expandPath(fs.getPath("/", "a", "b", "c"), false, false);
 				final List<Path> expectedExpandedPathsBefore = List.of(
@@ -966,6 +1007,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(new LeafTestUserNodeConfiguration(null))
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				final var path = fs.getPath("/", "a");
 				final var nodeView = fstv._expandPath(path);
 				final var unc = (LeafTestUserNodeConfiguration) nodeView.getUserNodeConfiguration();
@@ -1042,6 +1084,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(userNodeConfiguration)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertFalse(fstv.isPathSelected());
 				assertNull(fstv.getSelectedPath());
 				assertDoesNotThrow(() ->
@@ -1095,6 +1138,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(userNodeConfiguration)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				assertFalse(fstv.isPathSelected());
 				assertNull(fstv.getSelectedPath());
 				_testSingleSubRoot(mainFileSystem, fstv);
@@ -1142,6 +1186,7 @@ public class NodeCtrlTest
 				.setUserNodeConfiguration(userNodeConfiguration)
 				.build()))
 			{
+				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				final Path targetDirectory = mainFileSystem.getPath("/", "a", "b");
 				final NodeViewImpl nodeView = fstv._expandPath(targetDirectory);
 				final var watchServiceCtrl = nodeView.getWatchServiceCtrl();
@@ -1240,5 +1285,92 @@ public class NodeCtrlTest
 		{
 			Files.deleteIfExists(path);
 		}
+	}
+
+	/**
+	 * Compares the given paths for equality.
+	 * <em>Implementation note:</em>
+	 * The comparison intentionally avoids using {@code assertIterableEquals},
+	 * since it iterates deeply and the {@code Iterable} {@code Path} does not
+	 * take root elements into account. This might lead to false positive tests.
+	 */
+	private void _testRootDirectories(List<String> expected, ModifiableRootsFileSystem fs)
+	{
+		final List<Path> listExpected = new ArrayList<>();
+		expected.forEach(s -> listExpected.add(fs.getPath(s)));
+		final List<Path> listActual = new ArrayList<>();
+		fs.getRootDirectories().forEach(listActual::add);
+		assertEquals(listExpected, listActual);
+	}
+
+	@Test
+	public void testFileSystemDummy() throws IOException
+	{
+		final var fs = new ModifiableRootsFileSystem();
+		try (fs)
+		{
+			assertTrue(fs.isOpen(), "filesystem is not open");
+			assertNotEquals(FileSystems.getDefault(), fs);
+			_testRootDirectories(List.of(), fs);
+			fs.getModifiableRoots().add(fs.getPath("A"));
+			_testRootDirectories(List.of("A"), fs);
+			fs.getModifiableRoots().add(fs.getPath("A"));
+			_testRootDirectories(List.of("A"), fs);
+			fs.getModifiableRoots().add(fs.getPath("C"));
+			_testRootDirectories(List.of("A", "C"), fs);
+			fs.getModifiableRoots().add(fs.getPath("B"));
+			_testRootDirectories(List.of("A", "B", "C"), fs);
+			fs.getModifiableRoots().remove(fs.getPath("B"));
+			_testRootDirectories(List.of("A", "C"), fs);
+		}
+		assertFalse(fs.isOpen(), "filesystem is not closed");
+	}
+
+	@Test
+	public void testPathDummy() throws IOException
+	{
+		final var fs = new ModifiableRootsFileSystem();
+		try (fs)
+		{
+			assertTrue(fs.isOpen(), "filesystem is not open");
+			assertNotEquals(FileSystems.getDefault(), fs);
+			assertThrows(ClassCastException.class, () -> Path.of("test").compareTo(fs.getPath("test")));
+			assertEquals(fs.getPath("A"), fs.getPath("A"));
+			assertNotEquals(fs.getPath("A"), fs.getPath("B"));
+		}
+		assertFalse(fs.isOpen(), "filesystem is not closed");
+	}
+
+	/**
+	 * Test WatchService for changing FileSystem roots.
+	 *
+	 * @throws java.io.IOException
+	 */
+	@Test
+	public void testWatchService_FileSystemRoots() throws IOException
+	{
+		final var fs = new ModifiableRootsFileSystem();
+		try (fs)
+		{
+			assertTrue(fs.isOpen(), "filesystem is not open");
+			assertNotEquals(FileSystems.getDefault(), fs);
+			fs.getModifiableRoots().addAll(List.of(fs.getPath("A"), fs.getPath("C")));
+			// test watching of FileSystems roots:
+			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+				.setFileSystem(fs)
+				.setRequestingWatchService(true)
+				.build()))
+			{
+				assertEquals(List.of("A:", "C:"), fstv.getEntryNames());
+				assertTrue(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
+				final NodeViewImpl rootNodeView = fstv.getRootNodeView();
+				assertTrue(rootNodeView.getWatchServiceCtrl().isInUse());
+				_watchWatchService(rootNodeView, ADDED, fs.getPath("W"), ROOT, 2);
+				_watchWatchService(rootNodeView, REMOVED, fs.getPath("A"), ROOT, 0);
+				_watchWatchService(rootNodeView, ADDED, fs.getPath("E"), ROOT, 1);
+				_watchWatchService(rootNodeView, REMOVED, fs.getPath("W"), ROOT, 2);
+			}
+		}
+		assertFalse(fs.isOpen(), "filesystem is not closed");
 	}
 }

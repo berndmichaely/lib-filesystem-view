@@ -24,6 +24,8 @@ import java.lang.System.Logger;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -51,27 +53,26 @@ public final class NodeCtrlFileSystemRootsGlobal extends NodeCtrl implements Roo
 	{
 		super(directoryEntry, nodeConfig);
 		final var watchServiceCtrl = nodeConfig.getWatchServiceCtrl();
-		this.scheduledExecutorService = watchServiceCtrl.isInUse() && isWatchingFileSystemRoots() ?
+		final boolean watchServiceInUse = watchServiceCtrl.isInUse();
+		final boolean watchingFileSystemRoots;
+		if (watchServiceInUse)
+		{
+			final SortedSet<Path> roots = new TreeSet<>();
+			getFileSystem().getRootDirectories().forEach(roots::add);
+			watchingFileSystemRoots = roots.size() != 1 || !roots.first().toString().equals("/");
+		}
+		else
+		{
+			watchingFileSystemRoots = false;
+		}
+		this.scheduledExecutorService = watchServiceInUse && watchingFileSystemRoots ?
 			Executors.newScheduledThreadPool(1, watchServiceCtrl.getThreadFactory()) : null;
 	}
 
-	private boolean isWatchingFileSystemRoots()
+	@Override
+	public boolean isWatchingFileSystemRoots()
 	{
-		final boolean isDefaultFileSystem = getFileSystem().equals(FileSystems.getDefault());
-		final boolean isRunningOnWindows = isRunningOnOS(System.getProperty("os.name"), "win");
-		return isDefaultFileSystem && isRunningOnWindows;
-	}
-
-	/**
-	 * Checks whether running on a given OS.
-	 *
-	 * @param osName the OS name (e.g. taken from system properties)
-	 * @param infix  an identifying infix in lower case
-	 * @return true, iff running on the given OS
-	 */
-	static boolean isRunningOnOS(@Nullable String osName, String infix)
-	{
-		return osName != null ? osName.toLowerCase().contains(infix) : false;
+		return scheduledExecutorService != null && !scheduledExecutorService.isShutdown();
 	}
 
 	/**
