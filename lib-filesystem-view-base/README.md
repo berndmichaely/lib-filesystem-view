@@ -1,6 +1,6 @@
 # [lib-filesystem-view-base](https://github.com/berndmichaely/jem/lib-common/lib-filesystem-view/lib-filesystem-view-base)
 
-by [Bernd Michaely](https://bernd-michaely.de/en)
+![version](doc/shields/lib-filesystem-view.svg "version")
 
 This directory contains the base module of the `lib-filesystem-view` library consisting of modules:
 
@@ -10,7 +10,7 @@ This directory contains the base module of the `lib-filesystem-view` library con
 
 This abstract base module
 
-* is user interface independant (that is it is not limited to any particular UI like Swing or JavaFX, or even to a *graphical* UI)
+* is user interface independent (that is it is not limited to any particular UI like Swing or JavaFX, or even to a *graphical* UI)
 * contains the main controller providing
     * the filesystem data model for the tree view, integrated with a watch service
     * embedded filesystems
@@ -25,8 +25,7 @@ See the [README](../README.md) file in the libraries main directory.
 The essential steps are:
 
 * Extending the `IFileSystemTreeView` interface, providing an additional factory mechanism for your own component (and possibly some additional functionality, e.g. JavaFX properties)
-* Providing a class implementating this interface, containing a UI tree view component representing the data model provided by the `-base` module
+* Providing a class implementing this interface, containing a UI tree view component representing the data model provided by the `-base` module
 * Providing an implementation of the `NodeView` interface, containing essentially some factory methods to provide the specific UI components
 
 Examples are provides by the `-swing` and `-fx` modules as well as the unit tests of the `-base` module.
-

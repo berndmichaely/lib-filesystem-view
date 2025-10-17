@@ -17,7 +17,7 @@ The library provides the basic functionality one would expect from such a librar
 * Integration of a filesystem **watch service**:
     * if a directory is displayed and expanded in the current view, and a new subdirectory will be created externally in the filesystem, this will be detected and a new subdirectory entry will be created
     * if a subdirectory which is currently displayed in the view will be removed externally in the filesystem, it will be automatically removed from the view.
-* **High configurability**: by providing a custom implementation of an interface, the behaviour of the component can be controlled in a detailed way.
+* **High configurability**: by providing a custom implementation of an interface, the behavior of the component can be controlled in a detailed way.
 
 The latter point allows e.g. to:
 
@@ -25,15 +25,19 @@ The latter point allows e.g. to:
 * treat some particular directories conceptually as **leaf nodes**, that is it is not possible to descend into such directories. An application might want to hide the physical subdirectory structure of directories like `DCIM`, `.svn`, `.git` and the like and provide its own logical view instead
 * control the display of hidden directories.
 
+## Prerequisites
+
+To build the project or run the demo apps, you need a JDK installed (at least JDK17 or compatible). Tu use any of the `-swing` or `-fx` modules, you need to get the `-base` module before. (The library is mainly developed on Linux and tested on Linux and Windows.)
+
 ## Demo Apps
 
-The subdirectories of the `-swing` and `-fx` modules contain simple demo applications. To try them, have a JDK 17 installed, get the sources and run from the root directory:
+The subdirectories of the `-swing` and `-fx` modules contain simple demo applications. To try them, get the sources, go to the subdirectory and run:
 
 `> ./gradlew runDemo`
 
 ## Getting the libraries
 
-Have a JDK 17 installed and get the sources of the `-base` module and any of the `-swing` or `-fx` modules. Then for each, the `-base` module first, run from the root directory:
+Get the sources and run from each directory:
 
 `> ./gradlew publishToMavenLocal`
 
