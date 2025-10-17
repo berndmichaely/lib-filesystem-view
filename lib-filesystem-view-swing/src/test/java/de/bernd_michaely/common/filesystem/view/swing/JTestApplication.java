@@ -17,17 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
-import javax.swing.JComponent;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
-import javax.swing.LookAndFeel;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 import static java.lang.System.Logger.Level.*;
@@ -56,6 +46,18 @@ class JTestApplication
 		public boolean isCreatingNodeForFile(Path file)
 		{
 			return file.getFileName().toString().toLowerCase().endsWith(".zip");
+		}
+
+		/**
+		 * Creates nodes for all directories including hidden directories. (This is
+		 * needed in the unit tests, if the system dependant method to create
+		 * temporary directories creates a hidden directory, e.g. on Windows under
+		 * {@code \AppData}.)
+		 */
+		@Override
+		public boolean isCreatingNodeForDirectory(Path directory)
+		{
+			return true;
 		}
 
 		@Override

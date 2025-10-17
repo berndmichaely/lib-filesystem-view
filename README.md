@@ -48,11 +48,3 @@ Basically, use the factory methods of the main interfaces to create a new instan
 The `createInstance()` methods optionally take a `Configuration` argument, which can be configured via the `builder()`. Most enhanced configuration options then can be provided by passing an implementation of the `UserNodeConfiguration` interface.
 
 The detailed usage is described in a separate document [USAGE.md](USAGE.md) and the [GitHub Wiki](https://github.com/berndmichaely/lib-filesystem-view/wiki).
-
-## Current Status
-
-Early access.
-
-All functionality of first version implemented and should work.
-
-Open issues: GUI responsiveness in rare situations, more testing, …

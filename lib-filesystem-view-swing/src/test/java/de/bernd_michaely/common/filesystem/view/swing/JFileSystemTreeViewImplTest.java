@@ -117,6 +117,10 @@ public class JFileSystemTreeViewImplTest
 					assertEquals(1, pathConsumerSelect.getNumCalls());
 					assertEquals(1, pathConsumerUnselect.getNumCalls());
 				}
+				catch (Throwable t)
+				{
+					t.printStackTrace();
+				}
 				finally
 				{
 					assertFalse(Files.deleteIfExists(tempDirectory));

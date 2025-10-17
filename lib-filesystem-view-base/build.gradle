@@ -8,7 +8,7 @@ plugins {
 apply plugin: 'org.checkerframework'
 
 wrapper {
-	gradleVersion '8.7'
+	gradleVersion = '9.1.0'
 }
 
 final def javaLangVersion = JavaLanguageVersion.of(17)
@@ -159,9 +159,9 @@ javadoc {
 	}
 }
 
-task checkModuleNamingConvention (type: org.gradle.CheckModuleNamingConvention) {}
+tasks.register("checkModuleNamingConvention", org.gradle.CheckModuleNamingConvention) {}
 //check.dependsOn checkModuleNamingConvention
-clean.dependsOn checkModuleNamingConvention
+tasks.clean.dependsOn("checkModuleNamingConvention")
 
 publishing {
 	publications {

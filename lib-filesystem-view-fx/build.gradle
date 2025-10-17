@@ -9,7 +9,7 @@ plugins {
 apply plugin: 'org.checkerframework'
 
 wrapper {
-	gradleVersion '8.7'
+	gradleVersion = '9.1.0'
 }
 
 final def javaLangVersion = JavaLanguageVersion.of(17)
@@ -44,7 +44,7 @@ jacoco {
 	toolVersion = '0.8.10'
 }
 
-final def deactivateCheckerFramework = false
+final boolean deactivateCheckerFramework = false
 
 javafx {
 	version = "21.0.8"
@@ -92,7 +92,7 @@ testing {
 
 task runDemo {
 	group = 'Demo'
-	description 'Run a demo (runs the unit test in a demo mode showing the application window)'
+	description = 'Run a demo (runs the unit test in a demo mode showing the application window)'
 	final boolean isRunningDemo = project.gradle.startParameter.taskNames.contains(name)
 	final String modeTestDemo = isRunningDemo ? 'demo' : 'test'
 	logger.lifecycle "   -> Test/Demo Mode : »${modeTestDemo}«"
@@ -131,7 +131,7 @@ javadoc {
 	final def m = javafx.version =~ /(\d+)(\.\d+(\.\d+)?)?(-.+)?(\+.+)?/
 	if (m) {
 		javafxVer = m.group(1)
-		logger.lifecycle " -> JavaFX major version is ${javafxVer}"
+		logger.lifecycle "-> JavaFX major version is ${javafxVer}"
 	} else {
 		throw new StopExecutionException("Can't get JavaFX major version.")
 	}
@@ -143,9 +143,9 @@ javadoc {
 	options.use true
 }
 
-task checkModuleNamingConvention (type: org.gradle.CheckModuleNamingConvention) {}
+tasks.register("checkModuleNamingConvention", org.gradle.CheckModuleNamingConvention) {}
 //check.dependsOn checkModuleNamingConvention
-clean.dependsOn checkModuleNamingConvention
+tasks.clean.dependsOn("checkModuleNamingConvention")
 
 publishing {
 	publications {
