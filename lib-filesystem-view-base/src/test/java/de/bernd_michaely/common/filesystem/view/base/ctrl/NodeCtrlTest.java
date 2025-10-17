@@ -20,8 +20,8 @@ import de.bernd_michaely.common.filesystem.view.base.Configuration;
 import de.bernd_michaely.common.filesystem.view.base.NodeView;
 import de.bernd_michaely.common.filesystem.view.base.UserNodeConfiguration;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -35,7 +35,7 @@ import java.util.SortedSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
 
 import static com.google.common.jimfs.Configuration.*;
 import static com.google.common.jimfs.WatchServiceConfiguration.polling;
@@ -74,6 +74,44 @@ public class NodeCtrlTest
 	private static final String FILENAME_TXT_1 = "test1.txt";
 	private static final String DIR0 = "unit_tests";
 	private static final String DIR1 = "my_user";
+	private static class UserNodeConfigurationHiddenDirs implements UserNodeConfiguration
+	{
+		private static UserNodeConfiguration instance = new UserNodeConfigurationHiddenDirs();
+
+		/**
+		 * Returns the singleton instance.
+		 *
+		 * @return the singleton instance
+		 */
+		public static UserNodeConfiguration getInstance()
+		{
+			return instance;
+		}
+
+		/**
+		 * Returns the singleton instance.
+		 *
+		 * @param path unused (the configuration is shared for all paths)
+		 * @return the singleton instance
+		 */
+		@Override
+		public UserNodeConfiguration getUserNodeConfigurationFor(Path path)
+		{
+			return getInstance();
+		}
+
+		/**
+		 * Creates nodes for all directories including hidden directories. (This is
+		 * needed in the unit tests, if the system dependant method to create
+		 * temporary directories creates a hidden directory, e.g. on Windows under
+		 * {@code \AppData}.)
+		 */
+		@Override
+		public boolean isCreatingNodeForDirectory(Path directory)
+		{
+			return true;
+		}
+	}
 
 	/**
 	 * Creates a Windows type virtual filesystem and initializes it with a few
@@ -311,14 +349,12 @@ public class NodeCtrlTest
 	 */
 	private Path _copyZipResourceFileTo(Path targetDirectory) throws IOException
 	{
-		final URL resource = getClass().getResource(FILENAME_ZIP_1);
-		assertNotNull(resource);
-		final Path pathResource = getFileSystemResources().getPath(resource.getPath());
-		assertTrue(Files.isRegularFile(pathResource));
-		final Path copyTarget = Files.copy(pathResource,
-			targetDirectory.resolve(pathResource.getFileName().toString()));
-		final Path targetFile = targetDirectory.resolve(FILENAME_ZIP_1);
-		assertEquals(targetFile, copyTarget);
+		final Path copyTarget = targetDirectory.resolve(FILENAME_ZIP_1);
+		try (InputStream s = getClass().getResourceAsStream(FILENAME_ZIP_1))
+		{
+			assertNotNull(s);
+			Files.copy(s, copyTarget);
+		}
 		assertTrue(Files.isRegularFile(copyTarget));
 		return copyTarget;
 	}
@@ -656,10 +692,12 @@ public class NodeCtrlTest
 			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
 				.setFileSystem(tempDirectoryBase.getFileSystem())
 				.setRequestingWatchService(true)
+				.setUserNodeConfiguration(UserNodeConfigurationHiddenDirs.getInstance())
 				.build()))
 			{
 				final NodeViewImpl nodeView = fstv._expandPath(tempDirectoryBase);
 				final var watchServiceCtrl = nodeView.getWatchServiceCtrl();
+				assertTrue(watchServiceCtrl.isInUse());
 				assertFalse(watchServiceCtrl.isPathWatched(tempDirectoryBase));
 				nodeView.setExpanded(true);
 				assertTrue(watchServiceCtrl.isPathWatched(tempDirectoryBase));
@@ -1127,6 +1165,7 @@ public class NodeCtrlTest
 		try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
 			.setFileSystem(fileSystem)
 			.setRequestingWatchService(true)
+			.setUserNodeConfiguration(UserNodeConfigurationHiddenDirs.getInstance())
 			.build()))
 		{
 			final NodeViewImpl nodeView = fstv._expandPath(path);
