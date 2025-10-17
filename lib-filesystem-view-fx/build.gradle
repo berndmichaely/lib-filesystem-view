@@ -3,7 +3,7 @@ plugins {
 	id 'org.openjfx.javafxplugin' version '0.1.0'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.44' apply false
+	id 'org.checkerframework' version '0.6.55' apply false
 }
 
 apply plugin: 'org.checkerframework'
@@ -25,10 +25,14 @@ java {
 }
 
 group = 'de.bernd_michaely'
-version = '0.9.4'
+//version = '0.9.5'
+version = '0.9.5-snapshot'
+
+final def regexSemVer = ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+if (!(version =~ regexSemVer)) throw new StopExecutionException("Invalid semantic version »${version}«")
 
 ext.versionJUnit = '5.9.2'
-ext.versionCheckerFramework = '3.47.0'
+ext.versionCheckerFramework = '3.49.4'
 
 jacoco {
 	toolVersion = '0.8.10'

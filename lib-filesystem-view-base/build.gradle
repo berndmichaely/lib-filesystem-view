@@ -2,7 +2,7 @@ plugins {
 	id 'java-library'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.44' apply false
+	id 'org.checkerframework' version '0.6.55' apply false
 }
 
 apply plugin: 'org.checkerframework'
@@ -24,10 +24,14 @@ java {
 }
 
 group = 'de.bernd_michaely'
-version = '0.9.4'
+//version = '0.9.5'
+version = '0.9.5-snapshot'
+
+final def regexSemVer = ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+if (!(version =~ regexSemVer)) throw new StopExecutionException("Invalid semantic version »${version}«")
 
 ext.versionJUnit = '5.9.2'
-ext.versionCheckerFramework = '3.47.0'
+ext.versionCheckerFramework = '3.49.4'
 
 jacoco {
 	toolVersion = '0.8.10'
@@ -35,6 +39,9 @@ jacoco {
 
 final boolean deactivateCheckerFramework = false
 final boolean enableUmlDoclet = false
+
+ext.nameLib = 'lib-filesystem-view'
+final def fileVersionShield = file("doc/shields/${nameLib}.svg")
 
 logger.lifecycle "Running Gradle $project.gradle.gradleVersion"
 logger.lifecycle "Java source level           : ${java.sourceCompatibility}"
@@ -70,6 +77,23 @@ dependencies {
 	if (enableUmlDoclet) {
 		// https://github.com/talsma-ict/umldoclet
 		umlDoclet "nl.talsmasoftware:umldoclet:2.1.1"
+	}
+}
+
+def String toShieldParam(String text) {
+	text.replaceAll("-", "--").replaceAll("_", "__").replaceAll("\\s", "_")
+}
+
+task getVersionShield {
+	description = "Generate a version shield by accessing shields.io and write it to file »${fileVersionShield}«"
+	group = javadoc.group
+	doLast {
+		final String label = toShieldParam(nameLib)
+		//final String message = toShieldParam(project.version - ~'\\+.*$' - ~'-snapshot$')
+		final String message = toShieldParam(project.version - ~'\\+.*$')
+		final URL url = new URI("https://img.shields.io/badge/${label}-${message}-blue").toURL()
+		logger.lifecycle "→ getting data from URL »${url}«"
+		fileVersionShield.write(url.getText())
 	}
 }
 
@@ -127,7 +151,7 @@ javadoc {
 	def headerPostfix = '</strong></div>'
 	def header = headerPrefix + project.name + " (" + project.version + ')' + headerPostfix
 	options.header header
-	options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility.getMajorVersion()}/docs/api"
+	options.links "https://docs.oracle.com/en/java/javase/${javaSrcVersion.majorVersion}/docs/api"
 	options.links 'https://checkerframework.org/api'
 	options.windowTitle project.version
 	options.use true

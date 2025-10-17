@@ -3,8 +3,11 @@ package de.bernd_michaely.common.filesystem.view.swing;
 
 import de.bernd_michaely.common.filesystem.view.base.Configuration;
 import de.bernd_michaely.common.filesystem.view.base.RootNodeCtrl;
+import java.awt.Component;
+import java.awt.Font;
 import java.io.IOException;
 import java.lang.System.Logger;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,11 +16,13 @@ import java.util.function.Consumer;
 import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
+import javax.swing.ToolTipManager;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
@@ -66,7 +71,7 @@ class JFileSystemTreeViewImpl implements JFileSystemTreeView
 					}
 					else
 					{
-						logger.log(WARNING, getClass().getName() +
+						logger.log(WARNING, () -> getClass().getName() +
 							": unknown lastPathComponent type: " + lastSelectedPathComponent);
 					}
 				}
@@ -88,7 +93,7 @@ class JFileSystemTreeViewImpl implements JFileSystemTreeView
 				}
 				else
 				{
-					logger.log(WARNING, getClass().getName() +
+					logger.log(WARNING, () -> getClass().getName() +
 						": invalid lastPathComponent type: " + lastPathComponent);
 				}
 			});
@@ -104,6 +109,54 @@ class JFileSystemTreeViewImpl implements JFileSystemTreeView
 		public void treeCollapsed(TreeExpansionEvent event)
 		{
 			handleEvent(event, false);
+		}
+	}
+
+	@SuppressWarnings("call.ui") // TODO : UI annotations
+	private class PathViewTreeCellRenderer extends DefaultTreeCellRenderer
+	{
+		private @Nullable Font fontDefault;
+		private @Nullable Font fontSymLink;
+
+		@Override
+		public Component getTreeCellRendererComponent(JTree tree, @Nullable Object value,
+			boolean sel, boolean expanded, boolean leaf, int row, boolean hasFocus)
+		{
+			final Component treeCellRendererComponent = super.getTreeCellRendererComponent(
+				tree, value, sel, expanded, leaf, row, hasFocus);
+			if (value instanceof JNodeView.NodeViewTreeNode treeNode)
+			{
+				final var pathView = treeNode.getUserObject();
+				final var path = pathView.getPath();
+				final boolean isSymbolicLink = Files.isSymbolicLink(path);
+				if (this.fontDefault == null)
+				{
+					this.fontDefault = getFont();
+				}
+				if (this.fontSymLink == null && this.fontDefault != null)
+				{
+					this.fontSymLink = fontDefault.deriveFont(Font.ITALIC);
+				}
+				String toolTipText;
+				if (isSymbolicLink)
+				{
+					try
+					{
+						toolTipText = pathView + " → " + Files.readSymbolicLink(path);
+					}
+					catch (UnsupportedOperationException | IOException ex)
+					{
+						toolTipText = null;
+					}
+				}
+				else
+				{
+					toolTipText = null;
+				}
+				setFont(isSymbolicLink ? fontSymLink : fontDefault);
+				setToolTipText(toolTipText);
+			}
+			return treeCellRendererComponent;
 		}
 	}
 
@@ -128,6 +181,8 @@ class JFileSystemTreeViewImpl implements JFileSystemTreeView
 		jTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		jTree.addTreeSelectionListener(new TreeSelectionListenerImpl());
 		jTree.addTreeExpansionListener(new TreeExpansionListenerImpl());
+		ToolTipManager.sharedInstance().registerComponent(jTree);
+		jTree.setCellRenderer(new PathViewTreeCellRenderer());
 		this.jScrollPane = new JScrollPane(jTree);
 	}
 

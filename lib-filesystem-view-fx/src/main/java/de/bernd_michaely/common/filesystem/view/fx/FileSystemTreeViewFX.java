@@ -5,6 +5,7 @@ import de.bernd_michaely.common.filesystem.view.base.Configuration;
 import de.bernd_michaely.common.filesystem.view.base.PathView;
 import de.bernd_michaely.common.filesystem.view.base.RootNodeCtrl;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.SortedSet;
 import javafx.application.Platform;
@@ -13,9 +14,12 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ListChangeListener.Change;
+import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.Region;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
 import org.checkerframework.checker.nullness.qual.*;
 
 /**
@@ -29,6 +33,44 @@ class FileSystemTreeViewFX implements FileSystemTreeView
 	private final ReadOnlyBooleanWrapper pathSelectedProperty;
 	private final TreeView<PathView> treeView;
 	private final RootNodeCtrl rootNodeCtrl;
+
+	private static class PathViewTreeCell extends TreeCell<PathView>
+	{
+		private @MonotonicNonNull Font fontDefault;
+		private @MonotonicNonNull Font fontItalic;
+
+		private PathViewTreeCell(TreeView<PathView> treeView)
+		{
+		}
+
+		@SuppressWarnings("argument")
+		private void clear()
+		{
+			setText(null);
+			setGraphic(null);
+		}
+
+		@Override
+		protected void updateItem(PathView item, boolean empty)
+		{
+			super.updateItem(item, empty);
+			if (empty || item == null)
+			{
+				clear();
+			}
+			else
+			{
+				if (fontDefault == null || fontItalic == null)
+				{
+					fontDefault = getFont();
+					fontItalic = Font.font(
+						fontDefault.getFamily(), FontPosture.ITALIC, fontDefault.getSize());
+				}
+				setFont(Files.isSymbolicLink(item.getPath()) ? fontItalic : fontDefault);
+				setText(item.toString());
+			}
+		}
+	}
 
 	FileSystemTreeViewFX(Configuration configuration)
 	{
@@ -60,6 +102,9 @@ class FileSystemTreeViewFX implements FileSystemTreeView
 					}
 				}
 			});
+		this.treeView.setCellFactory(PathViewTreeCell::new);
+		// TODO:
+		//this.treeView.setCellFactory(TreeCellPathView::createInstance);
 	}
 
 	@Override
