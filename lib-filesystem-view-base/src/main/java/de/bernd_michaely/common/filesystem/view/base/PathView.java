@@ -16,6 +16,7 @@
 package de.bernd_michaely.common.filesystem.view.base;
 
 import java.nio.file.Path;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Encapsulation of a Path object for tree node UI user object. The
@@ -32,6 +33,15 @@ public interface PathView
 	 * @return the encapsulated path
 	 */
 	Path getPath();
+
+	/**
+	 * If the path is a symbolic link, returns the symbolic link target.
+	 *
+	 * @return if the path is a symbolic link, returns the symbolic link target,
+	 *         otherwise {@code null}
+	 */
+	@Nullable
+	Path getSymbolicLinkTarget();
 
 	/**
 	 * Returns a name for this path. This is the name of the last element of the

@@ -32,6 +32,7 @@ public final class DirectoryEntrySubDirectory extends DirectoryEntry
 
 	DirectoryEntrySubDirectory(Path path)
 	{
+		super(path);
 		this.path = requireNonNull(path, getClass().getName() + " : path is null");
 	}
 

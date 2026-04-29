@@ -41,6 +41,7 @@ public final class DirectoryEntryRegularFile extends DirectoryEntry
 
 	DirectoryEntryRegularFile(Path path, UserNodeConfiguration userNodeConfiguration)
 	{
+		super(path);
 		this.path = requireNonNull(path, getClass().getName() + " : path is null");
 		this.userNodeConfiguration = userNodeConfiguration;
 	}
