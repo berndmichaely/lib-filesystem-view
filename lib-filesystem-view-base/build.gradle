@@ -2,64 +2,37 @@ plugins {
 	id 'java-library'
 	id 'jacoco'
 	id 'maven-publish'
-	id 'org.checkerframework' version '0.6.60' apply false
+	id 'org.checkerframework' version '1.0.2'
+	id 'org.jreleaser' version '1.23.0'
 }
-
-apply plugin: 'org.checkerframework'
 
 wrapper {
-	gradleVersion = '9.1.0'
+	gradleVersion = '9.3.1'
 }
+
+// maven coordinates info:
+final var mc = Collections.unmodifiableMap ([
+		group       : 'de.bernd-michaely',
+		artifact    : rootProject.name,
+		version     : '1.0.0-rc.1',
+		repository  : rootProject.name - '-base',
+		description : 'Base module for a file system view containing the data model and common control logic'
+	])
+group = mc.group
+version = mc.version
+description = mc.description
 
 final def javaLangVersion = JavaLanguageVersion.of(17)
 final def jvmVendor = JvmVendorSpec.ADOPTIUM
 
-java {
-	toolchain {
-		languageVersion = javaLangVersion
-		vendor = jvmVendor
-	}
-	withJavadocJar()
-	withSourcesJar()
-}
-tasks.withType(JavaExec).configureEach {
-	javaLauncher = javaToolchains.launcherFor {
-		languageVersion = javaLangVersion
-		vendor = jvmVendor
-	}
-}
-
-group = 'de.bernd_michaely'
-version = '0.9.5'
-//version = '0.9.5-snapshot'
-
 final def regexSemVer = ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 if (!(version =~ regexSemVer)) throw new StopExecutionException("Invalid semantic version »${version}«")
 
-ext.versionJUnit = '5.13.4'
-
-jacoco {
-	toolVersion = '0.8.10'
-}
-
-final boolean deactivateCheckerFramework = false
 final boolean enableUmlDoclet = false
 
-ext.nameLib = 'lib-filesystem-view'
-final def fileVersionShield = file("doc/shields/${nameLib}.svg")
-
-logger.lifecycle "Running Gradle $project.gradle.gradleVersion"
-logger.lifecycle "Java source level           : ${java.sourceCompatibility}"
-logger.lifecycle "Compile      -> Debug-Level : ${compileJava.options.debug}"
-logger.lifecycle "Test-Compile -> Debug-Level : ${compileTestJava.options.debug}"
-logger.lifecycle "Modularity enabled          : ${java.modularity.inferModulePath.get()}"
-logger.lifecycle "==> Root project »$name ($version)«"
-logger.lifecycle " -> Base dir is »${file('.')}«"
-logger.lifecycle " -> Using »JUnit $versionJUnit«"
-logger.lifecycle " -> Using »JaCoCo ${jacoco.toolVersion}«"
-logger.lifecycle " -> Checker Framework is ${deactivateCheckerFramework ? 'DEACTIVATED!' : 'active.'}"
-logger.lifecycle " -> Included child projects : »${childProjects.keySet()}«"
-logger.lifecycle " -> Maven coordinates »${group}:${name}:${version}«"
+// files:
+final def fileSemVer = file('src/main/resources/de/bernd_michaely/common/filesystem/view/base/semantic_version.txt')
+final def fileVersionShield = file("doc/shields/${mc.artifact}.svg")
 
 repositories {
 	mavenCentral()
@@ -72,27 +45,61 @@ if (enableUmlDoclet) {
 }
 
 dependencies {
+	// Use JUnit Jupiter for testing.
+	testImplementation libs.junit.jupiter
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	
 	if (enableUmlDoclet) {
 		// https://github.com/talsma-ict/umldoclet
 		umlDoclet "nl.talsmasoftware:umldoclet:2.1.1"
 	}
 }
 
-task getVersionShield {
-	description = "Generate a version shield by accessing shields.io and write it to file »${fileVersionShield}«"
-	group = javadoc.group
-	final def toShieldParam = { it replaceAll '-', '--' replaceAll '_', '__' replaceAll '\\s', '_'  }
-	doLast {
-		final String label = toShieldParam nameLib
-		final String message = toShieldParam (version - ~/\+.*$/)
-		final String color = 'blue'
-		final def url = new URI("https://img.shields.io/badge/${label}-${message}-${color}").toURL()
-		logger.lifecycle "→ getting data from URL »${url}«"
-		fileVersionShield.write url.text
+checkerFramework {
+	version = libs.checker.get().version
+	checkers = [
+		'org.checkerframework.checker.nullness.NullnessChecker',
+		'org.checkerframework.checker.optional.OptionalChecker'
+	]
+	excludeTests = true
+}
+
+java {
+	toolchain {
+		languageVersion = javaLangVersion
+		vendor = jvmVendor
 	}
+	withJavadocJar()
+	withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	javaCompiler = javaToolchains.compilerFor {
+		languageVersion = javaLangVersion
+		vendor = jvmVendor
+	}
+}
+tasks.withType(Test).configureEach {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = javaLangVersion
+		vendor = jvmVendor
+	}
+}
+tasks.withType(JavaExec).configureEach {
+	javaLauncher = javaToolchains.launcherFor {
+		languageVersion = javaLangVersion
+		vendor = jvmVendor
+	}
+}
+tasks.withType(JavaCompile) {
+	options.compilerArgs += '-Xlint:unchecked'
+	options.compilerArgs += '-Xlint:deprecation'
+	options.compilerArgs += '-Xdiags:verbose'
+	logger.lifecycle "   -> compiler args : ${options.compilerArgs}"
 }
 
 tasks.named('test') {
+	// Use JUnit Platform for unit tests.
 	logger.lifecycle "=> Configuring task »$name« for JUnit"
 	systemProperty 'java.util.logging.config.file', file('src/test/java/logging.properties')
 	// Use JUnit Platform for unit tests.
@@ -103,12 +110,15 @@ tasks.named('test') {
 testing {
 	suites {
 		test {
-			useJUnitJupiter(versionJUnit)
 			dependencies {
 				implementation 'com.google.jimfs:jimfs:1.3.1'
 			}
 		}
 	}
+}
+
+jacoco {
+	toolVersion = '0.8.14'
 }
 
 jacocoTestReport {
@@ -118,20 +128,6 @@ jacocoTestReport {
 		final URL jacocoReportsUrl = new URL("file", null, "${jacocoReportsDir}/index.html")
 		logger.lifecycle " -> JaCoCo reports in »${jacocoReportsUrl}«"
 	}
-}
-
-checkerFramework {
-  checkers += 'org.checkerframework.checker.nullness.NullnessChecker'
-  skipCheckerFramework = deactivateCheckerFramework
-	excludeTests = true
-}
-
-tasks.withType(JavaCompile) {
-	logger.lifecycle "=> Configuring task »$name«"
-	options.compilerArgs += '-Xlint:unchecked'
-	options.compilerArgs += '-Xlint:deprecation'
-	options.compilerArgs += '-Xdiags:verbose'
-	logger.lifecycle "   -> compiler args : ${options.compilerArgs}"
 }
 
 javadoc {
@@ -159,25 +155,162 @@ javadoc {
 	}
 }
 
-tasks.register("checkModuleNamingConvention", org.gradle.CheckModuleNamingConvention) {}
-//check.dependsOn checkModuleNamingConvention
-tasks.clean.dependsOn("checkModuleNamingConvention")
+final Map<String, ?> _map = new LinkedHashMap<>()
+_map.put ("Project »${rootProject.name}«", mc.description)
+_map.put ("Maven coordinates", "»${mc.group}:${mc.artifact}:${mc.version}«")
+_map.put ("GitHub Repository name", mc.repository)
+_map.put ("Base dir is", "»${file('.')}«")
+_map.put ("Running Gradle", project.gradle.gradleVersion)
+_map.put ("Java source compatibility", java.sourceCompatibility)
+_map.put ("Java target compatibility", java.targetCompatibility)
+_map.put ("Java toolchain", java.toolchain.displayName)
+_map.put ("Compile -> Debug-Level", compileJava.options.debug)
+_map.put ("Test-Compile -> Debug-Level", compileTestJava.options.debug)
+_map.put ("Modularity enabled", java.modularity.inferModulePath.get())
+_map.put ("Using Checker Framework", checkerFramework.version.get())
+_map.put ("Using JUnit", libs.junit.jupiter.get().version)
+_map.put ("Using JaCoCo", jacoco.toolVersion)
+
+final int maxLenKey   = _map.keySet().stream().mapToInt(s->s.length()).max().orElse(0)
+final int maxLenValue = _map.values().stream().mapToInt(s->(""+s).length()).max().orElse(0)
+final int maxLenLine = maxLenKey + 3 + maxLenValue
+final def _line = "-" * (4 + maxLenLine)
+
+logger.lifecycle _line
+boolean isHeader = true
+_map.each { key, value ->
+	println "| %${maxLenKey}s | %-${maxLenValue}s |".formatted (key, value)
+	if (isHeader) {
+		logger.lifecycle _line
+		isHeader = false
+	}
+}
+logger.lifecycle _line
+
+task writeSemVer {
+	description = "Write application semantic version to resource file »${fileSemVer}«"
+	group = processResources.group
+	doFirst {
+		fileSemVer.write(mc.version)
+	}
+}
+processResources.dependsOn writeSemVer
+
+task getVersionShield {
+	description = "Generate a version shield by accessing shields.io and write it to file »${fileVersionShield}«"
+	group = javadoc.group
+	final def toShieldParam = { it replaceAll '-', '--' replaceAll '_', '__' replaceAll '\\s', '_'  }
+	doLast {
+		final String label = toShieldParam mc.artifact
+		final String message = toShieldParam (mc.version - ~/\+.*$/)
+		final String color = 'blue'
+		final def url = new URI("https://img.shields.io/badge/${label}-${message}-${color}").toURL()
+		logger.lifecycle "→ getting data from URL »${url}«"
+		fileVersionShield.write url.text
+	}
+}
 
 publishing {
 	publications {
-		libCommonFilesystemViewBase(MavenPublication) {
+		maven(MavenPublication) {
+			groupId = mc.group
+			artifactId = mc.artifact
+			final def repository = mc.repository
+
 			from components.java
-      pom {
-        name = 'common-filesystem-view-base'
-        description = 'Base module for a file system view containing the common control logic'
-        url = 'https://bernd-michaely.de'
-        licenses {
-          license {
-            name = 'Apache License, Version 2.0'
-            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-          }
-        }
-      }
+
+			pom {
+				name = artifactId
+				description = mc.description
+				url = "https://github.com/berndmichaely/${repository}"
+				inceptionYear = '2024'
+				licenses {
+					license {
+						name = 'Apache License, Version 2.0'
+						url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+					}
+				}
+				developers {
+					developer {
+						id = 'berndmichaely'
+						name = 'Bernd Michaely'
+					}
+				}
+				scm {
+					connection = "scm:git:https://github.com/berndmichaely/${repository}.git"
+					developerConnection = "scm:git:ssh://github.com/berndmichaely/${repository}.git"
+					url = "https://github.com/berndmichaely/${repository}"
+				}
+			}
 		}
+	}
+	repositories {
+		maven {
+			url = layout.buildDirectory.dir('staging-deploy')
+		}
+	}
+}
+	
+jreleaser {
+	project {
+		languages {
+			java {
+				version = javaLangVersion.toString()
+				artifactId = mc.artifact
+				/*
+				jvmOptions {
+				universal('-Dprop=value')
+				unix('-Dprop=value')
+				linux('-Dprop=value')
+				osx('-Dprop=value')
+				windows('-Dprop=value')
+				}
+				 */
+			}
+		}
+	}
+	signing {
+		pgp {
+			active = 'ALWAYS'
+			armored = true
+		}
+	}
+	deploy {
+		maven {
+			github {
+				app {
+					// active = 'RELEASE'
+					active = 'ALWAYS'
+					stagingRepository('build/staging-deploy')
+					applyMavenCentralRules = true
+				}
+			}
+			mavenCentral {
+				sonatype {
+					active = 'ALWAYS'
+					url = 'https://central.sonatype.com/api/v1/publisher'
+					stagingRepository('build/staging-deploy')
+					applyMavenCentralRules = true
+				}
+			}
+		}
+	}
+	release {
+		github {
+			repoOwner = 'berndmichaely'
+			name = mc.artifact
+			host = 'github.com'
+			username = 'berndmichaely'
+			sign = true
+			overwrite = true
+			commitAuthor {
+				name = 'berndmichaely'
+				email = 'info@bernd-michaely.de'
+			}
+		}
+	}
+	upload {
+		// active = 'RELEASE'
+		active = 'ALWAYS'
 	}
 }
