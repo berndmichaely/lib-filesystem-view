@@ -385,7 +385,8 @@ public class SynchronizableSortedDistinctList<T> extends AbstractList<T>
 	 *
 	 * @param index {@inheritDoc}
 	 * @return {@inheritDoc}
-	 * @throws IndexOutOfBoundsException {@inheritDoc}
+	 * @throws IndexOutOfBoundsException if the index is out of range
+	 *                                   ({@code index < 0 || index >= size()})
 	 */
 	@Override
 	public T remove(int index)

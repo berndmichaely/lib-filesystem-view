@@ -176,7 +176,7 @@ public class NodeCtrlTest
 		{
 			assertNotEquals(FileSystems.getDefault(), fs);
 			assertTrue(fs.isOpen(), "filesystem is not open");
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(fs)
 				.setRequestingWatchService(false)
 				.build()))
@@ -206,7 +206,7 @@ public class NodeCtrlTest
 		{
 			assertNotEquals(FileSystems.getDefault(), fs);
 			assertTrue(fs.isOpen(), "filesystem is not open");
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(fs)
 				.setRequestingWatchService(false)
 				.build()))
@@ -228,7 +228,7 @@ public class NodeCtrlTest
 		{
 			assertNotEquals(FileSystems.getDefault(), fs);
 			assertTrue(fs.isOpen(), "filesystem is not open");
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(fs)
 				.setRequestingWatchService(false)
 				.build()))
@@ -274,7 +274,7 @@ public class NodeCtrlTest
 				assertIterableEquals(expectedExpandedPaths, fstv.getExpandedPaths());
 				assertEquals(expectedExpandedPaths, List.copyOf(fstv.getExpandedPaths()));
 				// get "/" node and collapse it
-				final NodeViewImpl nodeView = fstv.getSubNodes().get(0);
+				final NodeViewDummy nodeView = fstv.getSubNodes().get(0);
 				final DirectoryEntry pathView = nodeView.getPathView();
 				final NodeCtrl nodeCtrl = pathView.getNodeCtrl();
 				assertTrue(nodeCtrl.isExpanded());
@@ -330,7 +330,7 @@ public class NodeCtrlTest
 			Files.createFile(path);
 			Files.isRegularFile(path);
 			assertEquals(0, Files.size(path));
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(mainFileSystem)
 				.setRequestingWatchService(false)
 				.setUserNodeConfiguration(userNodeConfiguration)
@@ -340,7 +340,7 @@ public class NodeCtrlTest
 				assertFalse(fstv.isPathSelected());
 				assertNull(fstv.getSelectedPath());
 				assertEquals(path, fstv.expandPath(path, false, true));
-				final NodeViewImpl nodeView = fstv._expandPath(path);
+				final NodeViewDummy nodeView = fstv._expandPath(path);
 				assertEquals(0, nodeView.getSubNodes().size());
 				assertEquals(path, fstv.getSelectedPath());
 			}
@@ -432,7 +432,7 @@ public class NodeCtrlTest
 				.getPath("/", "a", "b", "c", FILENAME_ZIP_1, "test1", "d", "e", "f", FILENAME_ZIP_2);
 			assertFalse(Files.isRegularFile(fileTest2Zip));
 			// create TreeView on JIMFS:
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(mainFileSystem)
 				.setRequestingWatchService(false)
 				.setUserNodeConfiguration(userNodeConfiguration)
@@ -523,7 +523,7 @@ public class NodeCtrlTest
 				.getPath("/", "a", "b", "c", "test.jimfs", "D:\\", "a", "b", "c");
 			assertFalse(Files.isRegularFile(mainFileSystem.getPath(path2.toString(), "test.txt")));
 			// create TreeView on JIMFS:
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(mainFileSystem)
 				.setRequestingWatchService(false)
 				.setUserNodeConfiguration(userNodeConfiguration)
@@ -563,7 +563,7 @@ public class NodeCtrlTest
 		{
 			for (TestConf testConfiguration : testConfigurations)
 			{
-				try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+				try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 					.setFileSystem(mainFileSystem)
 					.setRequestingWatchService(false)
 					.setFileNameComparator(testConfiguration.comparator())
@@ -604,7 +604,7 @@ public class NodeCtrlTest
 	 * @param index       the expected position of the added or removed subPath
 	 * @throws IOException
 	 */
-	private void _watchWatchService(NodeViewImpl nodeView, WatchAction watchAction,
+	private void _watchWatchService(NodeViewDummy nodeView, WatchAction watchAction,
 		Path subPath, EntryType entryType, int index)
 		throws IOException
 	{
@@ -725,13 +725,13 @@ public class NodeCtrlTest
 		System.out.println("testWatchService() : tempDirectoryBase is »" + tempDirectoryBase + "«");
 		try
 		{
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(tempDirectoryBase.getFileSystem())
 				.setRequestingWatchService(true)
 				.setUserNodeConfiguration(UserNodeConfigurationHiddenDirs.getInstance())
 				.build()))
 			{
-				final NodeViewImpl nodeView = fstv._expandPath(tempDirectoryBase);
+				final NodeViewDummy nodeView = fstv._expandPath(tempDirectoryBase);
 				final var watchServiceCtrl = nodeView.getWatchServiceCtrl();
 				assertTrue(watchServiceCtrl.isInUse());
 				if (isWatchingFileSystemRoots != null)
@@ -850,7 +850,7 @@ public class NodeCtrlTest
 		}
 	}
 
-	private void _testUpdates(Consumer<FileSystemTreeViewImpl> updateAction,
+	private void _testUpdates(Consumer<FileSystemTreeViewDummy> updateAction,
 		List<String> expectedExpandedPaths) throws IOException
 	{
 		final var userNodeConfiguration = new TestUserNodeConfiguration();
@@ -858,7 +858,7 @@ public class NodeCtrlTest
 		{
 			assertNotEquals(FileSystems.getDefault(), fs);
 			assertTrue(fs.isOpen(), "filesystem is not open");
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(fs)
 				.setRequestingWatchService(false)
 				.setUserNodeConfiguration(userNodeConfiguration)
@@ -918,7 +918,7 @@ public class NodeCtrlTest
 	@Test
 	public void testUpdateTree() throws IOException
 	{
-		_testUpdates(FileSystemTreeViewImpl::updateTree,
+		_testUpdates(FileSystemTreeViewDummy::updateTree,
 			List.of(
 				"/a/a",
 				"/a/b/a",
@@ -1001,7 +1001,7 @@ public class NodeCtrlTest
 		{
 			assertNotEquals(FileSystems.getDefault(), fs);
 			assertTrue(fs.isOpen(), "filesystem is not open");
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(fs)
 				.setRequestingWatchService(false)
 				.setUserNodeConfiguration(new LeafTestUserNodeConfiguration(null))
@@ -1023,11 +1023,11 @@ public class NodeCtrlTest
 		}
 	}
 
-	private void _testSingleSubRoot(FileSystem mainFileSystem, FileSystemTreeViewImpl fstv)
+	private void _testSingleSubRoot(FileSystem mainFileSystem, FileSystemTreeViewDummy fstv)
 	{
 		final var nodeView = fstv._expandPath(mainFileSystem.getPath("/", "a", "b", "c", FILENAME_ZIP_1));
 		nodeView.setExpanded(true);
-		final NodeViewImpl subNodeView = (NodeViewImpl) nodeView.getSubNodes().get(0);
+		final NodeViewDummy subNodeView = (NodeViewDummy) nodeView.getSubNodes().get(0);
 		final String subNodePathName = subNodeView.getPathView().getPath().toString();
 		System.out.println("subNodePathName = »" + subNodePathName + "«");
 		assertNotEquals("/", subNodePathName);
@@ -1078,7 +1078,7 @@ public class NodeCtrlTest
 			assertTrue(mainFileSystem.isOpen(), "filesystem is not open");
 			_copyZipResourceFileTo(mainFileSystem.getPath("/", "a", "b", "c"));
 			// create TreeView on JIMFS:
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(mainFileSystem)
 				.setRequestingWatchService(true)
 				.setUserNodeConfiguration(userNodeConfiguration)
@@ -1132,7 +1132,7 @@ public class NodeCtrlTest
 			assertTrue(mainFileSystem.isOpen(), "filesystem is not open");
 			_copyZipResourceFileTo(mainFileSystem.getPath("/", "a", "b", "c"));
 			// create TreeView on JIMFS:
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(mainFileSystem)
 				.setRequestingWatchService(true)
 				.setUserNodeConfiguration(userNodeConfiguration)
@@ -1180,7 +1180,7 @@ public class NodeCtrlTest
 		{
 			assertNotEquals(FileSystems.getDefault(), mainFileSystem);
 			assertTrue(mainFileSystem.isOpen(), "filesystem is not open");
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(mainFileSystem)
 				.setRequestingWatchService(true)
 				.setUserNodeConfiguration(userNodeConfiguration)
@@ -1188,7 +1188,7 @@ public class NodeCtrlTest
 			{
 				assertFalse(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
 				final Path targetDirectory = mainFileSystem.getPath("/", "a", "b");
-				final NodeViewImpl nodeView = fstv._expandPath(targetDirectory);
+				final NodeViewDummy nodeView = fstv._expandPath(targetDirectory);
 				final var watchServiceCtrl = nodeView.getWatchServiceCtrl();
 				assertFalse(watchServiceCtrl.isPathWatched(targetDirectory));
 				nodeView.setExpanded(true);
@@ -1207,13 +1207,13 @@ public class NodeCtrlTest
 		final var fileSystem = path.getFileSystem();
 		assertEquals(fileSystem, subPath.getFileSystem());
 		assertTrue(fileSystem.isOpen(), "filesystem is not open");
-		try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+		try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 			.setFileSystem(fileSystem)
 			.setRequestingWatchService(true)
 			.setUserNodeConfiguration(UserNodeConfigurationHiddenDirs.getInstance())
 			.build()))
 		{
-			final NodeViewImpl nodeView = fstv._expandPath(path);
+			final NodeViewDummy nodeView = fstv._expandPath(path);
 			final var watchServiceCtrl = nodeView.getWatchServiceCtrl();
 			assertTrue(watchServiceCtrl.isInUse());
 			assertFalse(watchServiceCtrl.isPathWatched(subPath));
@@ -1227,7 +1227,7 @@ public class NodeCtrlTest
 			assertEquals(numSubNodes - 1, nodeView.getSubNodes().size());
 			assertFalse(watchServiceCtrl.isPathWatched(subPath));
 			// automatic unselection of removed entries is not implemented in the
-			// FileSystemTreeViewImpl class, so the following test would fail…
+			// FileSystemTreeViewDummy class, so the following test would fail…
 			// assertFalse(fstv.isPathSelected());
 			// … but this should be tested in each actual UI implementation
 			// ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -1356,14 +1356,14 @@ public class NodeCtrlTest
 			assertNotEquals(FileSystems.getDefault(), fs);
 			fs.getModifiableRoots().addAll(List.of(fs.getPath("A"), fs.getPath("C")));
 			// test watching of FileSystems roots:
-			try (final var fstv = new FileSystemTreeViewImpl(Configuration.builder()
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
 				.setFileSystem(fs)
 				.setRequestingWatchService(true)
 				.build()))
 			{
 				assertEquals(List.of("A:", "C:"), fstv.getEntryNames());
 				assertTrue(fstv.getRootNodeCtrl().isWatchingFileSystemRoots());
-				final NodeViewImpl rootNodeView = fstv.getRootNodeView();
+				final NodeViewDummy rootNodeView = fstv.getRootNodeView();
 				assertTrue(rootNodeView.getWatchServiceCtrl().isInUse());
 				_watchWatchService(rootNodeView, ADDED, fs.getPath("W"), ROOT, 2);
 				_watchWatchService(rootNodeView, REMOVED, fs.getPath("A"), ROOT, 0);

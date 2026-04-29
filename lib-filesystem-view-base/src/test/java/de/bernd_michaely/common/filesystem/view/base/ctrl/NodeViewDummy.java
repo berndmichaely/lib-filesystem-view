@@ -30,7 +30,7 @@ import java.util.SortedMap;
  *
  * @author Bernd Michaely (info@bernd-michaely.de)
  */
-class NodeViewImpl implements NodeView, UnitTestCallback
+class NodeViewDummy implements NodeView, UnitTestCallback
 {
 //	private final boolean beVerbose = true;
 	private final boolean beVerbose = false;
@@ -40,7 +40,7 @@ class NodeViewImpl implements NodeView, UnitTestCallback
 	private boolean leafNode, expanded;
 	private UnitTestCallback unitTestCallback;
 
-	NodeViewImpl(PathView pathView)
+	NodeViewDummy(PathView pathView)
 	{
 		this.nodeViews = new ArrayList<>();
 		this.subNodes = Collections.unmodifiableList(nodeViews);

@@ -22,7 +22,7 @@ group = mc.group
 version = mc.version
 description = mc.description
 
-final def javaLangVersion = JavaLanguageVersion.of(17)
+final def javaLangVersion = JavaLanguageVersion.of(21)
 final def jvmVendor = JvmVendorSpec.ADOPTIUM
 
 final def regexSemVer = ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/

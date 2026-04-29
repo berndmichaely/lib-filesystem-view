@@ -24,6 +24,10 @@ import org.checkerframework.checker.nullness.qual.*;
 /**
  * Configuration with builder for file system tree view factories.
  *
+ * @param fileSystem            the file system to use
+ * @param requestWatchService   true to request a watch service
+ * @param fileNameComparator    the filename comparator to use
+ * @param userNodeConfiguration the UserNodeConfiguration to use
  * @author Bernd Michaely (info@bernd-michaely.de)
  */
 public record Configuration(

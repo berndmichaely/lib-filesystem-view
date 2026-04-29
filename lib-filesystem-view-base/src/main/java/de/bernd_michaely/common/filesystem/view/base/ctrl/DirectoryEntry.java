@@ -44,26 +44,29 @@ public abstract sealed class DirectoryEntry implements PathView
 
 	DirectoryEntry(Path path)
 	{
-		Path symlink = null;
-		try
+		Path symlinkTarget = null;
+		if (path != null && path.getFileSystem().provider() != null)
 		{
-			if (Files.isSymbolicLink(path))
+			try
 			{
-				try
+				if (Files.isSymbolicLink(path))
 				{
-					symlink = Files.readSymbolicLink(path);
-				}
-				catch (IOException ex)
-				{
-					symlink = null;
+					try
+					{
+						symlinkTarget = Files.readSymbolicLink(path);
+					}
+					catch (IOException ex)
+					{
+						symlinkTarget = null;
+					}
 				}
 			}
+			catch (UnsupportedOperationException ex)
+			{
+				symlinkTarget = null;
+			}
 		}
-		catch (UnsupportedOperationException ex)
-		{
-			symlink = null;
-		}
-		symbolicLinkTarget = symlink;
+		symbolicLinkTarget = symlinkTarget;
 	}
 
 	abstract NodeCtrl initNodeCtrl(NodeConfig nodeConfig);

@@ -66,7 +66,7 @@ public final class NodeCtrlFileSystemRootsGlobal extends NodeCtrl implements Roo
 			watchingFileSystemRoots = false;
 		}
 		this.scheduledExecutorService = watchServiceInUse && watchingFileSystemRoots ?
-			Executors.newScheduledThreadPool(1, watchServiceCtrl.getThreadFactory()) : null;
+			Executors.newScheduledThreadPool(1, Thread.ofVirtual().factory()) : null;
 	}
 
 	@Override

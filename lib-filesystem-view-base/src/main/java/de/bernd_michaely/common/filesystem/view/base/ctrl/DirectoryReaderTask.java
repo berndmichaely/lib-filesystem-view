@@ -47,19 +47,14 @@ public class DirectoryReaderTask implements Runnable
 	private final @Nullable Path directory;
 
 	/**
-	 * Encapsulates the taks results.
+	 * Encapsulates the tasks results.
+	 *
+	 * @param sortedSet            the directory entries to be added
+	 * @param startingWatchService indicates, whether watch service must be
+	 *                             started after directory entries have been added
 	 */
-	public static record TaskResult(
-		/**
-		 * The directory entries to be added.
-		 */
-		SortedSet<DirectoryEntry> sortedSet,
-		/**
-		 * Indicates, whether watch service must be started after directory entries
-		 * have been added
-		 */
-		boolean startingWatchService)
-		{
+	record TaskResult(SortedSet<DirectoryEntry> sortedSet, boolean startingWatchService)
+	{
 	}
 
 	/**

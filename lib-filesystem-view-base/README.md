@@ -1,6 +1,6 @@
 # [lib-filesystem-view-base](https://github.com/berndmichaely/jem/lib-common/lib-filesystem-view/lib-filesystem-view-base)
 
-![version](doc/shields/lib-filesystem-view.svg "version")
+![version](doc/shields/lib-filesystem-view-base.svg "version")
 
 This directory contains the base module of the `lib-filesystem-view` library consisting of modules:
 

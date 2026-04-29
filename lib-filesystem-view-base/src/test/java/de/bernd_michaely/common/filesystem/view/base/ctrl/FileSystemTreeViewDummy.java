@@ -30,15 +30,15 @@ import java.util.SortedSet;
  *
  * @author Bernd Michaely (info@bernd-michaely.de)
  */
-class FileSystemTreeViewImpl implements IFileSystemTreeView
+class FileSystemTreeViewDummy implements IFileSystemTreeView
 {
 	private final RootNodeCtrl rootNodeCtrl;
 	private Path selectedPath;
 	private final Configuration configuration;
 
-	FileSystemTreeViewImpl(Configuration configuration)
+	FileSystemTreeViewDummy(Configuration configuration)
 	{
-		this.rootNodeCtrl = RootNodeCtrl.create(configuration, NodeViewImpl::new);
+		this.rootNodeCtrl = RootNodeCtrl.create(configuration, NodeViewDummy::new);
 		this.configuration = configuration;
 	}
 
@@ -47,7 +47,7 @@ class FileSystemTreeViewImpl implements IFileSystemTreeView
 	{
 		if (absolutePath != null)
 		{
-			if (rootNodeCtrl.expandPath(absolutePath, expandLastElement) instanceof NodeViewImpl nodeView)
+			if (rootNodeCtrl.expandPath(absolutePath, expandLastElement) instanceof NodeViewDummy nodeView)
 			{
 				final Path path = nodeView.getPathView().getPath();
 				if (select)
@@ -104,9 +104,9 @@ class FileSystemTreeViewImpl implements IFileSystemTreeView
 	// Unit-Test specific, package local methods:
 	//
 
-	List<NodeViewImpl> getSubNodes()
+	List<NodeViewDummy> getSubNodes()
 	{
-		return getRootNodeView().getSubNodes().stream().map(nv -> ((NodeViewImpl) nv)).toList();
+		return getRootNodeView().getSubNodes().stream().map(nv -> ((NodeViewDummy) nv)).toList();
 	}
 
 	RootNodeCtrl getRootNodeCtrl()
@@ -114,15 +114,15 @@ class FileSystemTreeViewImpl implements IFileSystemTreeView
 		return rootNodeCtrl;
 	}
 
-	NodeViewImpl getRootNodeView()
+	NodeViewDummy getRootNodeView()
 	{
-		return (NodeViewImpl) rootNodeCtrl.getNodeView();
+		return (NodeViewDummy) rootNodeCtrl.getNodeView();
 	}
 
 	List<String> getEntryNames()
 	{
 		return getSubNodes().stream()
-			.map(NodeViewImpl::getPathView).map(PathView::getName).toList();
+			.map(NodeViewDummy::getPathView).map(PathView::getName).toList();
 	}
 
 	/**
@@ -132,9 +132,9 @@ class FileSystemTreeViewImpl implements IFileSystemTreeView
 	 * @param path the path to expand
 	 * @return the unit test specific implementation of the {@link NodeView}
 	 */
-	NodeViewImpl _expandPath(Path path)
+	NodeViewDummy _expandPath(Path path)
 	{
-		return (NodeViewImpl) rootNodeCtrl.expandPath(path, false);
+		return (NodeViewDummy) rootNodeCtrl.expandPath(path, false);
 	}
 
 	Configuration getConfiguration()

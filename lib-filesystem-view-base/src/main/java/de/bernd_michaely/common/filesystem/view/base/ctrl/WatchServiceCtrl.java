@@ -27,7 +27,6 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.ThreadFactory;
 import java.util.function.BiConsumer;
 import org.checkerframework.checker.nullness.qual.*;
 
@@ -42,31 +41,15 @@ import static java.nio.file.StandardWatchEventKinds.*;
 public class WatchServiceCtrl implements Closeable
 {
 	private static final Logger logger = System.getLogger(WatchServiceCtrl.class.getName());
-	private final @MonotonicNonNull WatchService watchService;
-	private final @MonotonicNonNull FileSystem fileSystemWatched;
-	private final WatchServiceThreadFactory threadFactory;
-	private final @MonotonicNonNull Thread threadWatchService;
-	private final @MonotonicNonNull SortedMap<Path, WatchableConfig> callbacks;
+	private final @Nullable WatchService watchService;
+	private final @Nullable FileSystem fileSystemWatched;
+	private final @Nullable Thread threadWatchService;
+	private final @Nullable SortedMap<Path, WatchableConfig> callbacks;
 
 	private record WatchableConfig(
 		WatchKey watchKey,
 		BiConsumer<WatchEvent.Kind<?>, @Nullable Path> callback)
 		{
-	}
-
-	private static class WatchServiceThreadFactory implements ThreadFactory
-	{
-		private final ThreadGroup threadGroup = new ThreadGroup(
-			"FileSystemTreeView-WatchServices-ThreadGroup");
-
-		@Override
-		public @NonNull
-		Thread newThread(Runnable runnable)
-		{
-			final var thread = new Thread(threadGroup, runnable);
-			thread.setDaemon(true);
-			return thread;
-		}
 	}
 
 	/**
@@ -86,8 +69,8 @@ public class WatchServiceCtrl implements Closeable
 		catch (UnsupportedOperationException ex)
 		{
 			_watchService = null;
-			logger.log(WARNING,
-				"WatchService requested, but not available, for FileSystem: »" + fileSystem + "«");
+			logger.log(WARNING, () ->
+				"WatchService requested, but not available, for FileSystem: »%s«".formatted(fileSystem));
 		}
 		catch (IOException ex)
 		{
@@ -95,10 +78,8 @@ public class WatchServiceCtrl implements Closeable
 			logger.log(WARNING, ex.toString());
 		}
 		this.watchService = _watchService;
-		this.threadFactory = new WatchServiceThreadFactory();
 		if (this.watchService != null)
 		{
-			this.fileSystemWatched = fileSystem;
 			this.callbacks = new TreeMap<>();
 			final Runnable watchServiceHandler = () ->
 			{
@@ -156,8 +137,18 @@ public class WatchServiceCtrl implements Closeable
 					}
 				}
 			};
-			this.threadWatchService = threadFactory.newThread(watchServiceHandler);
-			this.threadWatchService.setName("DirectoryWatchServiceThread");
+			final var thread = Thread.ofVirtual().factory().newThread(watchServiceHandler);
+			if (thread != null)
+			{
+				this.threadWatchService = thread;
+				this.threadWatchService.setName("DirectoryWatchServiceThread");
+				this.fileSystemWatched = fileSystem;
+			}
+			else
+			{
+				this.fileSystemWatched = null;
+				this.threadWatchService = null;
+			}
 		}
 		else
 		{
@@ -165,11 +156,6 @@ public class WatchServiceCtrl implements Closeable
 			this.callbacks = null;
 			this.threadWatchService = null;
 		}
-	}
-
-	WatchServiceThreadFactory getThreadFactory()
-	{
-		return threadFactory;
 	}
 
 	/**
@@ -212,11 +198,11 @@ public class WatchServiceCtrl implements Closeable
 			{
 				final var watchKey = directory.register(watchService, ENTRY_CREATE, ENTRY_DELETE);
 				callbacks.put(directory, new WatchableConfig(watchKey, callback));
-				logger.log(TRACE, "Start watching path »" + directory + "«");
+				logger.log(TRACE, () -> "Start watching path »%s«".formatted(directory));
 			}
 			catch (AccessDeniedException ex)
 			{
-				logger.log(INFO, "Access denied for path »" + ex.getFile() + "«");
+				logger.log(INFO, () -> "Access denied for path »" + ex.getFile() + "«");
 			}
 			catch (IOException ex)
 			{
@@ -237,7 +223,7 @@ public class WatchServiceCtrl implements Closeable
 			final var watchableConfig = callbacks.remove(directory);
 			if (watchableConfig != null)
 			{
-				logger.log(TRACE, "Stop watching path »" + directory + "«");
+				logger.log(TRACE, () -> "Stop watching path »%s«".formatted(directory));
 				watchableConfig.watchKey().cancel();
 			}
 		}
