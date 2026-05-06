@@ -1,4 +1,18 @@
-/* Created on Mar 13, 2023 */
+/*
+ * Copyright 2025 Bernd Michaely (info@bernd-michaely.de).
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package de.bernd_michaely.common.filesystem.view.swing;
 
 import de.bernd_michaely.common.filesystem.view.base.NodeView;
@@ -96,7 +110,7 @@ class JNodeView implements NodeView
 				}
 				else
 				{
-					logger.log(WARNING, getClass().getName() +
+					logger.log(WARNING, () -> getClass().getName() +
 						"::insertSubNodeAt : Invalid NodeView : " + subNodeView);
 				}
 			});
@@ -123,7 +137,7 @@ class JNodeView implements NodeView
 						}
 						else
 						{
-							logger.log(WARNING, getClass().getName() +
+							logger.log(WARNING, () -> getClass().getName() +
 								"::addAllSubNodes : Invalid NodeView : " + subNodeView);
 						}
 					}
@@ -184,11 +198,11 @@ class JNodeView implements NodeView
 				{
 					tree.collapsePath(treePath);
 				}
-				logger.log(INFO, (expanded ? "Expand" : "Collapse") + " node »" + getPathView() + "«");
+				logger.log(TRACE, () -> (expanded ? "Expand" : "Collapse") + " node »" + getPathView() + "«");
 			}
 			else
 			{
-				logger.log(WARNING, getClass().getName() + "::setExpanded : Invalid JTree reference");
+				logger.log(WARNING, () -> getClass().getName() + "::setExpanded : Invalid JTree reference");
 			}
 		});
 	}

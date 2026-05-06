@@ -16,18 +16,12 @@
 package de.bernd_michaely.common.filesystem.view.fx;
 
 import de.bernd_michaely.common.filesystem.view.base.PathView;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.NotLinkException;
-import javafx.beans.value.ObservableValue;
+import java.nio.file.Path;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeView;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
-import static java.lang.System.Logger.Level.WARNING;
 
 /**
  * TreeCell to customize symbolic links. SymLinks will be shown in italic font,
@@ -35,45 +29,42 @@ import static java.lang.System.Logger.Level.WARNING;
  *
  * @author Bernd Michaely (info@bernd-michaely.de)
  */
-class TreeCellPathView extends TreeCell<PathView>
+public class TreeCellPathView extends TreeCell<PathView>
 {
-	private static final System.Logger logger = System.getLogger(TreeCellPathView.class.getName());
-	private boolean isSymLinkSupported = true;
-	private @Nullable Font fontDefault;
-	private @Nullable Font fontSymLink;
+	private Font fontDefault = Font.getDefault();
+	private Font fontSymLink = Font.getDefault();
 
-	private TreeCellPathView(TreeView<PathView> treeView)
+	private TreeCellPathView()
 	{
 	}
 
-	static TreeCellPathView createInstance(TreeView<PathView> treeView)
+	/**
+	 * Factory method to create TreeCell instances.
+	 *
+	 * @param treeView the corresponding TreeView
+	 * @return a new TreeCell instance
+	 * @see TreeView#setCellFactory(javafx.util.Callback)
+	 */
+	public static TreeCellPathView factory(TreeView<PathView> treeView)
 	{
-		final var treeCell = new TreeCellPathView(treeView);
-		treeCell.fontProperty().addListener(treeCell::onFontChange);
-		treeCell.onFontChange(null, null, treeCell.getFont());
-		return treeCell;
+		final var newInstance = new TreeCellPathView();
+		final var font = newInstance.getFont();
+		newInstance.fontDefault = font;
+		newInstance.fontSymLink = Font.font(font.getFamily(), FontPosture.ITALIC, font.getSize());
+		return newInstance;
 	}
 
-	private void onFontChange(@Nullable ObservableValue<? extends Font> obs,
-		@Nullable Font oldValue, @Nullable Font newValue)
-	{
-		if (newValue != null)
-		{
-			fontDefault = newValue;
-			fontSymLink = Font.font(newValue.getFamily(), FontPosture.ITALIC, newValue.getSize());
-		}
-		else
-		{
-			fontDefault = null;
-			fontSymLink = null;
-		}
-	}
-
-	@SuppressWarnings(value = "argument")
-	private void clear()
+	@SuppressWarnings("argument")
+	private void clearItem()
 	{
 		setText(null);
 		setGraphic(null);
+	}
+
+	@SuppressWarnings("argument")
+	private void clearTooltip()
+	{
+		setTooltip(null);
 	}
 
 	@Override
@@ -82,38 +73,22 @@ class TreeCellPathView extends TreeCell<PathView>
 		super.updateItem(item, empty);
 		if (empty || item == null)
 		{
-			clear();
+			clearItem();
+			clearTooltip();
 		}
 		else
 		{
-			final String title = item.toString();
-			setText(title);
-			if (isSymLinkSupported)
+			setText(item.toString());
+			final Path symbolicLinkTarget = item.getSymbolicLinkTarget();
+			if (symbolicLinkTarget != null)
 			{
-				final var path = item.getPath();
-				try
-				{
-					final boolean isSymLink = Files.isSymbolicLink(path);
-					if (fontDefault != null && fontSymLink != null)
-					{
-						setFont(isSymLink ? fontSymLink : fontDefault);
-						if (isSymLink)
-						{
-							setTooltip(new Tooltip(title + " → " + Files.readSymbolicLink(path)));
-						}
-					}
-				}
-				catch (UnsupportedOperationException ex)
-				{
-					isSymLinkSupported = false;
-				}
-				catch (NotLinkException ex)
-				{
-				}
-				catch (IOException ex)
-				{
-					logger.log(WARNING, () -> "Trying to read SymLink for path : " + path, ex);
-				}
+				setFont(fontSymLink);
+				setTooltip(new Tooltip(symbolicLinkTarget.toString()));
+			}
+			else
+			{
+				setFont(fontDefault);
+				clearTooltip();
 			}
 		}
 	}

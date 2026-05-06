@@ -13,15 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /**
- * Module implementing a file system tree view for Java Swing.
+ * Base package of module implementing a file system tree view for Java Swing.
  */
-module de.bernd_michaely.common.filesystem.view.swing
-{
-	requires de.bernd_michaely.common.filesystem.view.base;
-	requires java.desktop;
-	requires org.checkerframework.checker.qual;
-
-	exports de.bernd_michaely.common.filesystem.view.swing;
-}
+package de.bernd_michaely.common.filesystem.view.swing;

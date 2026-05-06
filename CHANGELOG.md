@@ -1,5 +1,11 @@
 # lib-filesystem-view – Change Log
 
+## 1.0.0-rc.1
+
+  * showing symbolic links in italic font, link target as tooltip
+  * added unit tests
+  * updated build configuration
+
 ## v0.9.5
 
   * revisited existing unit tests (which worked on Linux) to also work on Windows
