@@ -1,6 +1,6 @@
-# [lib-filesystem-view-fx](https://github.com/berndmichaely/jem/lib-common/lib-filesystem-view/lib-filesystem-view-fx)
+# lib-filesystem-view-fx
 
-![version](../lib-filesystem-view-base/doc/shields/lib-filesystem-view.svg "version")
+![version](doc/shields/lib-filesystem-view-fx.svg "version")
 
 This directory contains the module providing the [JavaFX](https://openjfx.io/) based implementation of the `lib-filesystem-view` library consisting of modules:
 

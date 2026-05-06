@@ -15,7 +15,7 @@ final var mc = Collections.unmodifiableMap ([
 		group       : 'de.bernd-michaely',
 		artifact    : rootProject.name,
 		version     : '1.0.0-rc.1',
-		repository  : rootProject.name - '-base',
+		repository  : rootProject.name - ~/-[^-]+$/,
 		description : 'Base module for a file system view containing the data model and common control logic'
 	])
 group = mc.group
@@ -142,7 +142,7 @@ javadoc {
 	def headerPostfix = '</strong></div>'
 	def header = headerPrefix + project.name + " (" + project.version + ')' + headerPostfix
 	options.header header
-	options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility}/docs/api"
+	//options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility}/docs/api"
 	options.links 'https://checkerframework.org/api'
 	options.windowTitle project.version
 	options.use true

@@ -1,4 +1,4 @@
-# [lib-filesystem-view-base](https://github.com/berndmichaely/jem/lib-common/lib-filesystem-view/lib-filesystem-view-base)
+# lib-filesystem-view-base
 
 ![version](doc/shields/lib-filesystem-view-base.svg "version")
 

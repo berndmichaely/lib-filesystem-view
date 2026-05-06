@@ -21,6 +21,7 @@ import java.lang.System.Logger;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
@@ -31,6 +32,7 @@ import java.util.function.BiConsumer;
 import org.checkerframework.checker.nullness.qual.*;
 
 import static java.lang.System.Logger.Level.*;
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.nio.file.StandardWatchEventKinds.*;
 
 /**
@@ -50,7 +52,7 @@ public class WatchServiceCtrl implements Closeable
 	private record WatchableConfig(
 		WatchKey watchKey,
 		BiConsumer<WatchEvent.Kind<?>, @Nullable Path> callback)
-		{
+	{
 	}
 
 	/**
@@ -199,7 +201,7 @@ public class WatchServiceCtrl implements Closeable
 
 	synchronized void registerPath(Path directory, BiConsumer<WatchEvent.Kind<?>, @Nullable Path> callback)
 	{
-		if (precondition(directory))
+		if (precondition(directory) && Files.isDirectory(directory, NOFOLLOW_LINKS))
 		{
 			try
 			{
