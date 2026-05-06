@@ -109,9 +109,9 @@ class FileSystemTreeViewDummy implements IFileSystemTreeView
 		return getRootNodeView().getSubNodes().stream().map(nv -> ((NodeViewDummy) nv)).toList();
 	}
 
-	RootNodeCtrl getRootNodeCtrl()
+	NodeCtrlFileSystemRootsGlobal getRootNodeCtrl()
 	{
-		return rootNodeCtrl;
+		return (NodeCtrlFileSystemRootsGlobal) rootNodeCtrl;
 	}
 
 	NodeViewDummy getRootNodeView()
@@ -140,5 +140,10 @@ class FileSystemTreeViewDummy implements IFileSystemTreeView
 	Configuration getConfiguration()
 	{
 		return configuration;
+	}
+
+	void closeWatchService() throws IOException
+	{
+		getRootNodeCtrl().getSubNodes().getNodeConfig().getWatchServiceCtrl().close();
 	}
 }

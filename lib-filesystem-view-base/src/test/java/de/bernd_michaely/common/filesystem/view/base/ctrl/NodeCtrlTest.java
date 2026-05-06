@@ -42,6 +42,7 @@ import static com.google.common.jimfs.Configuration.*;
 import static com.google.common.jimfs.WatchServiceConfiguration.polling;
 import static de.bernd_michaely.common.filesystem.view.base.ctrl.NodeCtrlTest.EntryType.*;
 import static de.bernd_michaely.common.filesystem.view.base.ctrl.NodeCtrlTest.WatchAction.*;
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.nio.file.StandardOpenOption.*;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.*;
@@ -1372,5 +1373,51 @@ public class NodeCtrlTest
 			}
 		}
 		assertFalse(fs.isOpen(), "filesystem is not closed");
+	}
+
+	@Test
+	public void testWatchService_Closed() throws IOException
+	{
+		try (final FileSystem fs = createUnixFileSystem())
+		{
+			assertNotEquals(FileSystems.getDefault(), fs);
+			assertTrue(fs.isOpen(), "filesystem is not open");
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
+				.setFileSystem(fs)
+				.setRequestingWatchService(true)
+				.build()))
+			{
+				fstv._expandPath(fs.getPath("/", "a", "b"));
+				fstv.closeWatchService();
+				assertDoesNotThrow(
+					() -> fstv._expandPath(fs.getPath("/", "a", "b", "c")),
+					"Trying to register path on closed WatchService");
+			}
+		}
+	}
+
+	@Test
+	public void testSymLinks() throws IOException
+	{
+		try (final FileSystem fs = createUnixFileSystem())
+		{
+			assertNotEquals(FileSystems.getDefault(), fs);
+			assertTrue(fs.isOpen(), "filesystem is not open");
+			final Path targetPath = fs.getPath("/", "a", "b", "c");
+			final Path symLink = fs.getPath("/", "sym-link");
+			Files.createSymbolicLink(symLink, targetPath);
+			assertTrue(Files.exists(symLink, NOFOLLOW_LINKS));
+			assertTrue(Files.exists(symLink));
+			assertTrue(Files.exists(targetPath));
+			try (final var fstv = new FileSystemTreeViewDummy(Configuration.builder()
+				.setFileSystem(fs)
+				.setRequestingWatchService(false)
+				.build()))
+			{
+				final var pathView = fstv._expandPath(symLink).getPathView();
+				assertEquals("/sym-link", pathView.getPath().toString());
+				assertEquals("/a/b/c", pathView.getSymbolicLinkTarget().toString());
+			}
+		}
 	}
 }

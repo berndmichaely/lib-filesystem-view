@@ -45,6 +45,7 @@ public class WatchServiceCtrl implements Closeable
 	private final @Nullable FileSystem fileSystemWatched;
 	private final @Nullable Thread threadWatchService;
 	private final @Nullable SortedMap<Path, WatchableConfig> callbacks;
+	private volatile boolean isActive;
 
 	private record WatchableConfig(
 		WatchKey watchKey,
@@ -86,8 +87,8 @@ public class WatchServiceCtrl implements Closeable
 				if (this.watchService != null)
 				{
 					WatchKey watchKey = null;
-					boolean isActive = true;
-					while (isActive)
+					this.isActive = true;
+					while (this.isActive)
 					{
 						try
 						{
@@ -127,7 +128,11 @@ public class WatchServiceCtrl implements Closeable
 						}
 						catch (ClosedWatchServiceException ex)
 						{
-							isActive = false;
+							this.isActive = false;
+							if (callbacks != null)
+							{
+								callbacks.clear();
+							}
 							logger.log(TRACE, () -> "WatchService closed.");
 						}
 						catch (InterruptedException ex)
@@ -186,7 +191,9 @@ public class WatchServiceCtrl implements Closeable
 	}, result = true)
 	private boolean precondition(Path directory)
 	{
-		return directory != null && watchService != null && callbacks != null &&
+		return directory != null &&
+			watchService != null && this.isActive &&
+			callbacks != null &&
 			fileSystemWatched != null && fileSystemWatched.equals(directory.getFileSystem());
 	}
 
@@ -202,11 +209,16 @@ public class WatchServiceCtrl implements Closeable
 			}
 			catch (AccessDeniedException ex)
 			{
-				logger.log(INFO, () -> "Access denied for path »" + ex.getFile() + "«");
+				logger.log(INFO, () -> "Access denied for path »" + ex.getFile() + "«", ex);
+			}
+			catch (ClosedWatchServiceException ex)
+			{
+				logger.log(WARNING,
+					() -> "Trying to register directory »" + directory + "« with closed WatchService", ex);
 			}
 			catch (IOException ex)
 			{
-				logger.log(WARNING, ex.toString());
+				logger.log(WARNING, () -> ex.toString(), ex);
 			}
 		}
 	}
@@ -232,11 +244,16 @@ public class WatchServiceCtrl implements Closeable
 	@Override
 	public void close() throws IOException
 	{
-		if (watchService != null)
+		if (watchService != null && isActive)
 		{
 			try (watchService)
 			{
 				logger.log(TRACE, "Closing directory WatchService …");
+			}
+			isActive = false;
+			if (callbacks != null)
+			{
+				callbacks.clear();
 			}
 			logger.log(TRACE, "Closing directory WatchService done.");
 		}
