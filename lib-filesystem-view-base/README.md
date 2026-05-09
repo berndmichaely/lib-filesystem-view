@@ -4,23 +4,43 @@
 
 This directory contains the base module of the `lib-filesystem-view` library consisting of modules:
 
-* **`lib-filesystem-view-base`**
-* `lib-filesystem-view-fx`
-* `lib-filesystem-view-swing`
+  * **`lib-filesystem-view-base`**
+  * `lib-filesystem-view-fx`
+  * `lib-filesystem-view-swing`
 
 This abstract base module
 
-* is user interface independent (that is it is not limited to any particular UI like Swing or JavaFX, or even to a *graphical* UI)
-* contains the main controller providing
+  * is user interface independent (that is it is not limited to any particular UI like Swing or JavaFX, or even to a *graphical* UI)
+  * contains the main controller providing
     * the filesystem data model for the tree view, integrated with a watch service
     * embedded filesystems
-* contains most unit tests.
+  * contains most unit tests.
 
 This module is a dependency of the `-swing` and `-fx` modules and won't be used directly, besides you want to provide your own implementation (see below).
 
 See the [README](../README.md) file in the libraries main directory.
 
-## Providing your own implementation
+#### Maven coordinates
+
+Releases are available at:
+
+```
+de.bernd-michaely::lib-filesystem-view-base:${version}
+```
+
+#### Module info
+
+```java
+module de.bernd_michaely.common.filesystem.view.base
+{
+  requires org.checkerframework.checker.qual;
+
+  exports de.bernd_michaely.common.filesystem.view.base;
+  exports de.bernd_michaely.common.filesystem.view.base.common;
+}
+```
+
+#### Providing your own implementation
 
 The essential steps are:
 

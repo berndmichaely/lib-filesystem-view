@@ -1,16 +1,24 @@
 # lib-filesystem-view
 
 ![version](lib-filesystem-view-base/doc/shields/lib-filesystem-view-base.svg "version")
-
 ![version](lib-filesystem-view-fx/doc/shields/lib-filesystem-view-fx.svg "version")
-
 ![version](lib-filesystem-view-swing/doc/shields/lib-filesystem-view-swing.svg "version")
 
 This directory contains the modules of the `lib-filesystem-view` library consisting of the modules:
 
-* `lib-filesystem-view-base`
-* `lib-filesystem-view-fx`
-* `lib-filesystem-view-swing`
+  * `lib-filesystem-view-base`
+  * `lib-filesystem-view-fx`
+  * `lib-filesystem-view-swing`
+
+#### Maven coordinates
+
+Releases are available at:
+
+```
+de.bernd-michaely::lib-filesystem-view-base:${version}
+de.bernd-michaely::lib-filesystem-view-fx:${version}
+de.bernd-michaely::lib-filesystem-view-swing:${version}
+```
 
 `lib-filesystem-view` is a Java library to provide a tree view of a FileSystem in the user interface of a desktop application.
 
@@ -18,16 +26,16 @@ This directory contains the modules of the `lib-filesystem-view` library consist
 
 The library provides the basic functionality one would expect from such a library, as well as some **advanced features**, in particular:
 
-* Integration of a filesystem **watch service**:
+  * Integration of a filesystem **watch service**:
     * if a directory is displayed and expanded in the current view, and a new subdirectory will be created externally in the filesystem, this will be detected and a new subdirectory entry will be created
     * if a subdirectory which is currently displayed in the view will be removed externally in the filesystem, it will be automatically removed from the view.
-* **High configurability**: by providing a custom implementation of an interface, the behavior of the component can be controlled in a detailed way.
+  * **High configurability**: by providing a custom implementation of an interface, the behavior of the component can be controlled in a detailed way.
 
 The latter point allows e.g. to:
 
-* mount a virtual inline view of an **embedded filesystem**, e.g. the contents of an archive file (see the `test1.zip` and `test2.zip` files in the screenshot)
-* treat some particular directories conceptually as **leaf nodes**, that is it is not possible to descend into such directories. An application might want to hide the physical subdirectory structure of directories like `DCIM`, `.svn`, `.git` and the like and provide its own logical view instead
-* control the display of hidden directories.
+  * mount a virtual inline view of an **embedded filesystem**, e.g. the contents of an archive file (see the `test1.zip` and `test2.zip` files in the screenshot)
+  * treat some particular directories conceptually as **leaf nodes**, that is it is not possible to descend into such directories. An application might want to hide the physical subdirectory structure of directories like `DCIM`, `.svn`, `.git` and the like and provide its own logical view instead
+  * control the display of hidden directories.
 
 ## Prerequisites
 
@@ -39,11 +47,7 @@ The subdirectories of the `-swing` and `-fx` modules contain simple demo applica
 
 `> ./gradlew runDemo`
 
-## Getting the libraries
-
-Get the sources and run from each directory:
-
-`> ./gradlew publishToMavenLocal`
+For the `-swing` version, there is also the script `FilesystemViewSwingDemo.groovy`, which can be used as demo or template.
 
 ## Using the libraries
 
