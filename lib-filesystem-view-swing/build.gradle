@@ -140,11 +140,12 @@ jacocoTestReport {
 javadoc {
 	def headerPrefix = '<div style="margin-top:14px;"><strong>'
 	def headerPostfix = '</strong></div>'
-	def header = headerPrefix + project.name + " (" + project.version + ')' + headerPostfix
+	def headerTitle = "${mc.artifact} (${mc.version})"
+	def header = headerPrefix + headerTitle + headerPostfix
 	options.header header
 	//options.links "https://docs.oracle.com/en/java/javase/${java.sourceCompatibility}/docs/api"
-	options.links 'https://checkerframework.org/api'
-	options.windowTitle project.version
+	//options.links 'https://checkerframework.org/api'
+	options.windowTitle headerTitle
 	options.use true
 }
 
@@ -182,10 +183,10 @@ _map.each { key, value ->
 logger.lifecycle _line
 
 task writeSemVer {
-	description = "Write application semantic version to resource file »${fileSemVer}«"
+	description = "Write semantic version of library to resource file »${fileSemVer}«"
 	group = processResources.group
 	doFirst {
-		fileSemVer.write(mc.version)
+		fileSemVer.write mc.version
 	}
 }
 processResources.dependsOn writeSemVer
