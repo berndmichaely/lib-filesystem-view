@@ -243,6 +243,7 @@ publishing {
 }
 	
 jreleaser {
+	gitRootSearch = true
 	project {
 		languages {
 			java {
@@ -286,6 +287,7 @@ jreleaser {
 			}
 		}
 	}
+/*
 	release {
 		github {
 			repoOwner = 'berndmichaely'
@@ -300,6 +302,7 @@ jreleaser {
 			}
 		}
 	}
+*/
 	upload {
 		// active = 'RELEASE'
 		active = 'ALWAYS'
