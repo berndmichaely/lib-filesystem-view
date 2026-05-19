@@ -39,7 +39,7 @@ The latter point allows e.g. to:
 
 ## Prerequisites
 
-To build the project or run the demo apps, you need a JDK installed (at least JDK 21 or compatible, for the `-fx` version at least JDK 25). Tu use any of the `-swing` or `-fx` modules, you need to get the `-base` module before. (The library is mainly developed on Linux and tested on Linux and Windows.)
+To build the project or run the demo apps, you need a JDK installed (at least JDK17 or compatible). Tu use any of the `-swing` or `-fx` modules, you need to get the `-base` module before. (The library is mainly developed on Linux and tested on Linux and Windows.)
 
 ## Demo Apps
 
