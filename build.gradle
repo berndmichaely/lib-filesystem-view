@@ -16,7 +16,7 @@ final var mc = Collections.unmodifiableMap ([
 		group       : 'de.bernd-michaely',
 		artifact    : rootProject.name,
 		version     : '1.0.0-rc.1',
-		repository  : rootProject.name - ~/-[^-]+$/,
+		repository  : rootProject.name,
 		description : 'Base module for a file system view containing the data model and common control logic'
 	])
 group = mc.group
@@ -29,10 +29,6 @@ final def jvmVendor = JvmVendorSpec.ADOPTIUM
 final def regexSemVer = ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 if (!(version =~ regexSemVer)) throw new StopExecutionException("Invalid semantic version »${version}«")
 
-// files:
-final def fileSemVer = file('src/main/resources/de/bernd_michaely/common/filesystem/view/base/semantic_version.txt')
-final def fileVersionShield = file("doc/shields/${mc.artifact}.svg")
-
 repositories {
 	mavenCentral()
 }
@@ -42,33 +38,6 @@ java {
 		languageVersion = javaLangVersion
 		vendor = jvmVendor
 	}
-	withJavadocJar()
-	withSourcesJar()
-}
-
-tasks.withType(JavaCompile).configureEach {
-	javaCompiler = javaToolchains.compilerFor {
-		languageVersion = javaLangVersion
-		vendor = jvmVendor
-	}
-}
-tasks.withType(Test).configureEach {
-	javaLauncher = javaToolchains.launcherFor {
-		languageVersion = javaLangVersion
-		vendor = jvmVendor
-	}
-}
-tasks.withType(JavaExec).configureEach {
-	javaLauncher = javaToolchains.launcherFor {
-		languageVersion = javaLangVersion
-		vendor = jvmVendor
-	}
-}
-tasks.withType(JavaCompile) {
-	options.compilerArgs += '-Xlint:unchecked'
-	options.compilerArgs += '-Xlint:deprecation'
-	options.compilerArgs += '-Xdiags:verbose'
-	logger.lifecycle "   -> compiler args : ${options.compilerArgs}"
 }
 
 final Map<String, ?> _map = new LinkedHashMap<>()
@@ -96,29 +65,6 @@ _map.each { key, value ->
 	}
 }
 logger.lifecycle _line
-
-task writeSemVer {
-	description = "Write semantic version of library to resource file »${fileSemVer}«"
-	group = processResources.group
-	doFirst {
-		fileSemVer.write mc.version
-	}
-}
-//processResources.dependsOn writeSemVer
-
-task getVersionShield {
-	description = "Generate a version shield by accessing shields.io and write it to file »${fileVersionShield}«"
-	group = javadoc.group
-	final def toShieldParam = { it replaceAll '-', '--' replaceAll '_', '__' replaceAll '\\s', '_'  }
-	doLast {
-		final String label = toShieldParam mc.artifact
-		final String message = toShieldParam (mc.version - ~/\+.*$/)
-		final String color = 'blue'
-		final def url = new URI("https://img.shields.io/badge/${label}-${message}-${color}").toURL()
-		logger.lifecycle "→ getting data from URL »${url}«"
-		fileVersionShield.write url.text
-	}
-}
 
 jreleaser {
 	gitRootSearch = true
