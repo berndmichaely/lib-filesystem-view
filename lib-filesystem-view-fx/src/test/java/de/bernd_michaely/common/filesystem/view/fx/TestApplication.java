@@ -31,10 +31,17 @@ import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import static java.lang.System.Logger.Level.*;
@@ -53,13 +60,14 @@ public class TestApplication extends Application
 	private static CountDownLatch countDownLatchShutdown;
 	private static TestApplication testApplication;
 	private FileSystemTreeView fileSystemTreeView;
+	private final CheckMenuItem menuItemHiddenDirs = new CheckMenuItem("Show hidden directories");
 
 	private boolean isDemoMode()
 	{
 		return Boolean.parseBoolean(getParameters().getNamed().get(PARAMETER_NAME_SHOW_WINDOW));
 	}
 
-	private static class TestUserNodeConfiguration implements UserNodeConfiguration
+	private class TestUserNodeConfiguration implements UserNodeConfiguration
 	{
 		private TestUserNodeConfiguration()
 		{
@@ -80,7 +88,15 @@ public class TestApplication extends Application
 		@Override
 		public boolean isCreatingNodeForDirectory(Path directory)
 		{
-			return true;
+			try
+			{
+				return menuItemHiddenDirs.isSelected() || !Files.isHidden(directory);
+			}
+			catch (IOException ex)
+			{
+				logger.log(WARNING, getClass().getName() + "::isCreatingNodeForDirectory", ex);
+				return false;
+			}
 		}
 
 		@Override
@@ -129,7 +145,28 @@ public class TestApplication extends Application
 			label.setPadding(new Insets(4, 0, 8, 0));
 			borderPane.setPadding(new Insets(8));
 			borderPane.setCenter(splitPane);
-			borderPane.setTop(label);
+			final var menuFile = new Menu("File");
+			final var menuItemExit = new MenuItem("Exit");
+			menuItemExit.setOnAction(event -> countDownLatchShutdown.countDown());
+			menuFile.getItems().add(menuItemExit);
+			final var menuView = new Menu("View");
+			menuView.getItems().add(menuItemHiddenDirs);
+			menuItemHiddenDirs.setOnAction(event -> fileSystemTreeView.updateTree());
+			final var menuHelp = new Menu("Help");
+			final MenuItem menuItemInfoAbout = new MenuItem("Info about...");
+			menuItemInfoAbout.setOnAction(event ->
+			{
+				final var dialog = new Alert(Alert.AlertType.INFORMATION,
+					"Demo application for lib-filesystem-view-fx",
+					ButtonType.OK);
+				dialog.initModality(Modality.APPLICATION_MODAL);
+				dialog.initOwner(stage);
+				dialog.showAndWait();
+			});
+			menuHelp.getItems().add(menuItemInfoAbout);
+			final var menuBar = new MenuBar(menuFile, menuView, menuHelp);
+			borderPane.setTop(menuBar);
+			borderPane.setBottom(label);
 			label.textProperty().bind(
 				fileSystemTreeView.selectedPathProperty().asString("Selected path : »%s«"));
 			fileSystemTreeView.selectedPathProperty().addListener((observable, oldValue, newValue) ->
