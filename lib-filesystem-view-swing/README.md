@@ -17,7 +17,7 @@ There is also the script `demo/FilesystemViewSwingDemo.groovy`, which can be use
 Releases are available at:
 
 ```
-de.bernd-michaely::lib-filesystem-view-swing:${version}
+de.bernd-michaely:lib-filesystem-view-swing:${version}
 ```
 
 #### Module info

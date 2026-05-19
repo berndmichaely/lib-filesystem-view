@@ -25,7 +25,7 @@ See the [README](../README.md) file in the libraries main directory.
 Releases are available at:
 
 ```
-de.bernd-michaely::lib-filesystem-view-base:${version}
+de.bernd-michaely:lib-filesystem-view-base:${version}
 ```
 
 #### Module info

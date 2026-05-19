@@ -15,9 +15,9 @@ This directory contains the modules of the `lib-filesystem-view` library consist
 Releases are available at:
 
 ```
-de.bernd-michaely::lib-filesystem-view-base:${version}
-de.bernd-michaely::lib-filesystem-view-fx:${version}
-de.bernd-michaely::lib-filesystem-view-swing:${version}
+de.bernd-michaely:lib-filesystem-view-base:${version}
+de.bernd-michaely:lib-filesystem-view-fx:${version}
+de.bernd-michaely:lib-filesystem-view-swing:${version}
 ```
 
 `lib-filesystem-view` is a Java library to provide a tree view of a FileSystem in the user interface of a desktop application.

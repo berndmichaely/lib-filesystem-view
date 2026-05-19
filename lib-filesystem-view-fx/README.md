@@ -15,7 +15,7 @@ See the [README](../README.md) file in the libraries main directory.
 Releases are available at:
 
 ```
-de.bernd-michaely::lib-filesystem-view-fx:${version}
+de.bernd-michaely:lib-filesystem-view-fx:${version}
 ```
 
 #### Module info
