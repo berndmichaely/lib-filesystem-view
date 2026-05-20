@@ -79,12 +79,6 @@ public class TestApplication extends Application
 			return file.getFileName().toString().toLowerCase().endsWith(".zip");
 		}
 
-		/**
-		 * Creates nodes for all directories including hidden directories. (This is
-		 * needed in the unit tests, if the system dependant method to create
-		 * temporary directories creates a hidden directory, e.g. on Windows under
-		 * {@code \AppData}.)
-		 */
 		@Override
 		public boolean isCreatingNodeForDirectory(Path directory)
 		{
