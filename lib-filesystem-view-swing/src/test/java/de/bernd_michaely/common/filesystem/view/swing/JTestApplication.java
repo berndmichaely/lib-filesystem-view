@@ -19,6 +19,7 @@ import de.bernd_michaely.common.filesystem.view.base.Configuration;
 import de.bernd_michaely.common.filesystem.view.base.UserNodeConfiguration;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -49,8 +50,9 @@ class JTestApplication
 	private static CountDownLatch countDownLatchShutdown;
 	private final JFrame frame;
 	private final JFileSystemTreeView fileSystemTreeView;
+	private final JCheckBoxMenuItem menuItemHiddenDirs = new JCheckBoxMenuItem();
 
-	private static class TestUserNodeConfiguration implements UserNodeConfiguration
+	private class TestUserNodeConfiguration implements UserNodeConfiguration
 	{
 		private TestUserNodeConfiguration()
 		{
@@ -62,16 +64,18 @@ class JTestApplication
 			return file.getFileName().toString().toLowerCase().endsWith(".zip");
 		}
 
-		/**
-		 * Creates nodes for all directories including hidden directories. (This is
-		 * needed in the unit tests, if the system dependant method to create
-		 * temporary directories creates a hidden directory, e.g. on Windows under
-		 * {@code \AppData}.)
-		 */
 		@Override
 		public boolean isCreatingNodeForDirectory(Path directory)
 		{
-			return true;
+			try
+			{
+				return menuItemHiddenDirs.isSelected() || !Files.isHidden(directory);
+			}
+			catch (IOException ex)
+			{
+				logger.log(WARNING, getClass().getName() + "::isCreatingNodeForDirectory", ex);
+				return false;
+			}
 		}
 
 		@Override
@@ -144,11 +148,44 @@ class JTestApplication
 		final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
 			true, component, scrollPaneList);
 		final JPanel paneContent = new JPanel(new BorderLayout());
-		labelSelectedPath.setBorder(new EmptyBorder(8, 8, 0, 8));
+		labelSelectedPath.setBorder(new EmptyBorder(0, 8, 8, 8));
 		splitPane.setBorder(new EmptyBorder(8, 8, 8, 8));
 		paneContent.add(splitPane, BorderLayout.CENTER);
-		paneContent.add(labelSelectedPath, BorderLayout.PAGE_START);
+		paneContent.add(labelSelectedPath, BorderLayout.PAGE_END);
 		frame.getContentPane().add(paneContent);
+		final JMenu menuFile = new JMenu("File");
+		final JMenuBar menuBar = new JMenuBar();
+		menuBar.add(menuFile);
+		menuFile.add(new JMenuItem(new AbstractAction("Exit")
+		{
+			@Override
+			public void actionPerformed(ActionEvent ae)
+			{
+				frame.dispose();
+			}
+		}));
+		final JMenu menuView = new JMenu("View");
+		menuItemHiddenDirs.setAction(new AbstractAction("Show hidden directories")
+		{
+			@Override
+			public void actionPerformed(ActionEvent ae)
+			{
+				fileSystemTreeView.updateTree();
+			}
+		});
+		menuView.add(menuItemHiddenDirs);
+		menuBar.add(menuView);
+		final JMenu menuHelp = new JMenu("Help");
+		menuHelp.add(new JMenuItem(new AbstractAction("Info about...")
+		{
+			@Override
+			public void actionPerformed(ActionEvent ae)
+			{
+				JOptionPane.showMessageDialog(frame, "Demo application for lib-filesystem-view-swing");
+			}
+		}));
+		menuBar.add(menuHelp);
+		frame.setJMenuBar(menuBar);
 		frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
 		frame.pack();
 		if (demoMode)
