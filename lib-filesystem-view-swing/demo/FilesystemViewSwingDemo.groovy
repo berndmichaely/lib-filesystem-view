@@ -5,8 +5,11 @@
 import com.formdev.flatlaf.*
 import de.bernd_michaely.common.filesystem.view.base.*
 import de.bernd_michaely.common.filesystem.view.swing.*
+//import groovy.transform.Field
 import java.awt.*;
+import java.awt.event.*;
 import java.nio.file.*;
+import java.util.function.*;
 import javax.swing.*;
 import javax.swing.border.*;
 import static javax.swing.WindowConstants.*;
@@ -15,6 +18,13 @@ println 'Running Swing based filesystem view demo ...'
 
 class DemoUserNodeConfiguration implements UserNodeConfiguration
 {
+	private BooleanSupplier showHiddenDirs;
+
+	DemoUserNodeConfiguration(BooleanSupplier showHiddenDirs)
+	{
+		this.showHiddenDirs = showHiddenDirs;
+	}
+
 	@Override
 	public boolean isCreatingNodeForFile(Path file)
 	{
@@ -24,7 +34,15 @@ class DemoUserNodeConfiguration implements UserNodeConfiguration
 	@Override
 	public boolean isCreatingNodeForDirectory(Path directory)
 	{
-		return true;
+		try
+		{
+			return showHiddenDirs.getAsBoolean() || !Files.isHidden(directory);
+		}
+		catch (IOException ex)
+		{
+			logger.log(WARNING, getClass().getName() + "::isCreatingNodeForDirectory", ex);
+			return false;
+		}
 	}
 
 	@Override
@@ -44,7 +62,7 @@ class DemoUserNodeConfiguration implements UserNodeConfiguration
 	@Override
 	public UserNodeConfiguration getUserNodeConfigurationFor(Path path)
 	{
-		return new DemoUserNodeConfiguration();
+		return new DemoUserNodeConfiguration(showHiddenDirs);
 	}
 
 	@Override
@@ -58,9 +76,10 @@ class DemoUserNodeConfiguration implements UserNodeConfiguration
 FlatDarkLaf.setup()
 
 final var frame = new JFrame(JFileSystemTreeView.class.getSimpleName() + " – Simple Demo");
+final var menuItemHiddenDirs = new JCheckBoxMenuItem();
 final var fileSystemTreeView = JFileSystemTreeView.createInstance(
 	Configuration.builder()
-	.setUserNodeConfiguration(new DemoUserNodeConfiguration())
+	.setUserNodeConfiguration(new DemoUserNodeConfiguration(menuItemHiddenDirs::isSelected))
 	.setRequestingWatchService(true)
 	.build());
 final var labelSelectedPath = new JLabel();
@@ -98,11 +117,44 @@ scrollPaneList.setViewportView(listDirContent);
 final var splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
 	true, component, scrollPaneList);
 final var paneContent = new JPanel(new BorderLayout());
-labelSelectedPath.setBorder(new EmptyBorder(8, 8, 0, 8));
+labelSelectedPath.setBorder(new EmptyBorder(0, 8, 8, 8));
 splitPane.setBorder(new EmptyBorder(8, 8, 8, 8));
 paneContent.add(splitPane, BorderLayout.CENTER);
-paneContent.add(labelSelectedPath, BorderLayout.PAGE_START);
+paneContent.add(labelSelectedPath, BorderLayout.PAGE_END);
 frame.getContentPane().add(paneContent);
+final JMenu menuFile = new JMenu("File");
+final JMenuBar menuBar = new JMenuBar();
+menuBar.add(menuFile);
+menuFile.add(new JMenuItem(new AbstractAction("Exit")
+		{
+			@Override
+			public void actionPerformed(ActionEvent ae)
+			{
+				frame.dispose();
+			}
+		}));
+final JMenu menuView = new JMenu("View");
+menuItemHiddenDirs.setAction(new AbstractAction("Show hidden directories")
+	{
+		@Override
+		public void actionPerformed(ActionEvent ae)
+		{
+			fileSystemTreeView.updateTree();
+		}
+	});
+menuView.add(menuItemHiddenDirs);
+menuBar.add(menuView);
+final JMenu menuHelp = new JMenu("Help");
+menuHelp.add(new JMenuItem(new AbstractAction("Info about...")
+		{
+			@Override
+			public void actionPerformed(ActionEvent ae)
+			{
+				JOptionPane.showMessageDialog(frame, "Demo application for lib-filesystem-view-swing");
+			}
+		}));
+menuBar.add(menuHelp);
+frame.setJMenuBar(menuBar);
 frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
 frame.pack();
 frame.setVisible(true);
