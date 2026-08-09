@@ -27,23 +27,29 @@ de.bernd-michaely:lib-filesystem-view-swing:${version}
 The library provides the basic functionality one would expect from such a library, as well as some **advanced features**, in particular:
 
   * Integration of a filesystem **watch service**:
-    * if a directory is displayed and expanded in the current view, and a new subdirectory will be created externally in the filesystem, this will be detected and a new subdirectory entry will be created
-    * if a subdirectory which is currently displayed in the view will be removed externally in the filesystem, it will be automatically removed from the view.
+    * if a directory is displayed and expanded in the current view, and a new sub-directory will be created externally in the filesystem, this will be detected and a new sub-directory entry will be created
+    * if a sub-directory which is currently displayed in the view will be removed externally in the filesystem, it will be automatically removed from the view.
   * **High configurability**: by providing a custom implementation of an interface, the behavior of the component can be controlled in a detailed way.
 
 The latter point allows e.g. to:
 
   * mount a virtual inline view of an **embedded filesystem**, e.g. the contents of an archive file (see the `test1.zip` and `test2.zip` files in the screenshot)
-  * treat some particular directories conceptually as **leaf nodes**, that is it is not possible to descend into such directories. An application might want to hide the physical subdirectory structure of directories like `DCIM`, `.svn`, `.git` and the like and provide its own logical view instead
+  * treat some particular directories conceptually as **leaf nodes**, that is it is not possible to descend into such directories. An application might want to hide the physical sub-directory structure of directories like `DCIM`, `.svn`, `.git` and the like and provide its own logical view instead
   * control the display of hidden directories.
 
 ## Prerequisites
 
 To build the project or run the demo apps, you need a JDK installed (at least JDK17 or compatible). Tu use any of the `-swing` or `-fx` modules, you need to get the `-base` module before. (The library is mainly developed on Linux and tested on Linux and Windows.)
 
+### Minimum Java versions
+
+To use the `-base` or the `-swing` module, Java 21 is needed at minimum, the `-fx` module needs at minimum Java 25.
+
+To run the `gradlew` Gradle wrapper, currently a JDK 17 is needed at minimum (it will download a suitable tool-chain and cache it locally, if none can be found on the system).
+
 ## Demo Apps
 
-The subdirectories of the `-swing` and `-fx` modules contain simple demo applications. To try them, get the sources, go to the subdirectory and run:
+The sub-directories of the `-swing` and `-fx` modules contain simple demo applications. To try them, get the sources, go to the sub-directory and run:
 
 `> ./gradlew runDemo`
 
